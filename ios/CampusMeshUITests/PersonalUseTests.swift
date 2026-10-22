@@ -4,7 +4,9 @@ final class PersonalUseTests: XCTestCase {
     func testPersonalUseAndPersistence() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN", "-ui.tab", "0"]
+        // Do not override ui.tab through launch arguments: the argument domain has
+        // precedence over persisted preferences and would pin TabView to one page.
+        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         addUIInterruptionMonitor(withDescription: "System permission") { alert in
             for title in ["允许", "Allow", "好", "OK", "不允许", "Don’t Allow", "Don't Allow"] {
                 let button = alert.buttons[title]
@@ -15,6 +17,7 @@ final class PersonalUseTests: XCTestCase {
         app.launch()
         // Trigger permission handling before checking app content behind the alert.
         app.tap()
+        app.tabBars.buttons["聊天"].tap()
         let ready = app.staticTexts["本机已就绪 · 0 位好友"]
         XCTAssertTrue(ready.waitForExistence(timeout: 30), "The real Rust core must start successfully")
         capture("01-聊天")
@@ -60,6 +63,7 @@ final class PersonalUseTests: XCTestCase {
         capture("04-自定义")
         app.terminate()
         app.launch()
+        app.tabBars.buttons["聊天"].tap()
         XCTAssertTrue(ready.waitForExistence(timeout: 30))
         app.tabBars.buttons["身份"].tap()
         XCTAssertTrue(app.staticTexts[nickname].waitForExistence(timeout: 10), "Nickname must survive a full app restart")
