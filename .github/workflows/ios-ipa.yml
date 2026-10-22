@@ -1,0 +1,106 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Upload the unsigned IPA to its alpha prerelease
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'core/**'
+      - 'Cargo.*'
+      - 'rust-toolchain.toml'
+      - '.cargo/**'
+      - 'scripts/build-ios.sh'
+      - 'scripts/package-ios-ipa.py'
+      - '.github/workflows/ios-ipa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 35
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+      artifact: ${{ steps.metadata.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
+      - name: Install XcodeGen
+        run: command -v xcodegen >/dev/null || brew install xcodegen
+      - name: Build iPhone archive and verified unsigned IPA
+        run: ./scripts/build-ios.sh --device
+      - id: metadata
+        name: Read package version
+        run: |
+          python3 - <<'PY'
+          import os, plistlib
+          from pathlib import Path
+          info = plistlib.loads(Path('ios/build/CampusMesh.xcarchive/Products/Applications/CampusMesh.app/Info.plist').read_bytes())
+          tag = f'{info["CMReleaseChannel"]}-{info["CFBundleShortVersionString"]}'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'tag={tag}\nartifact=CampusMesh-iOS-{tag}-unsigned\n')
+          PY
+      - id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.artifact }}
+          path: |
+            artifacts/CampusMesh-alpha-*-unsigned.ipa
+            artifacts/CampusMesh-alpha-*-unsigned.ipa.sha256
+            artifacts/CampusMesh-alpha-*-unsigned.ipa.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Summarize build
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          python3 - <<'PY'
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('iPhone ARM64 device archive packaged as an unsigned IPA.\n\n')
+              summary.write(f'[Download package]({os.environ["ARTIFACT_URL"]})\n\n')
+              summary.write('Installation requires valid Apple signing and provisioning; this package is not directly installable.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ios-device-build-log
+          path: ios/build/archive.log
+          if-no-files-found: ignore
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact }}
+          path: package
+      - name: Publish unsigned IPA assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null
+          gh release upload "$RELEASE_TAG" package/* --clobber

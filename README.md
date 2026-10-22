@@ -6,7 +6,7 @@
 
 ## iOS 0.4 Liquid Glass
 
-保留 Telegram 风格会话与聊天气泡，输入栏、快捷短语、发送及最新消息按钮适配 Apple 原生 Liquid Glass。新增通透控件开关与实时预览，支持辅助功能实色回退。iOS 26+ 使用原生玻璃，iOS 16–18 使用兼容材质。构建要求 Xcode 26+；当前环境未完成 Xcode 编译或 iPhone 运行验证。详见 [适配与验证说明](docs/LIQUID-GLASS.md)。Android 仍为 0.3.0。
+保留 Telegram 风格会话与聊天气泡，输入栏、快捷短语、发送及最新消息按钮适配 Apple 原生 Liquid Glass。新增通透控件开关与实时预览，支持辅助功能实色回退。iOS 26+ 使用原生玻璃，iOS 16–18 使用兼容材质。构建要求 Xcode 26+；GitHub macOS 的 Xcode 26.2 模拟器编译已通过，尚未完成 iPhone 运行验证。详见 [适配与验证说明](docs/LIQUID-GLASS.md)。Android 仍为 0.3.0。
 
 测试版统一命名为 **`alpha-版本号`**：当前 Android 为 `alpha-0.3.0`，iOS 为 `alpha-0.4.0`。应用版本标识与新交付文件名遵循此规则，详见 [版本命名约定](docs/RELEASE-NAMING.md)。
 
@@ -60,6 +60,8 @@ iOS：需要 macOS、Xcode 26 或更新版本（含 iOS 26+ SDK）、XcodeGen、
 ```
 
 随后打开 `ios/CampusMesh.xcodeproj`，选择自己的开发团队和设备。iOS 最低 16，构建脚本按 Mac 主机架构选择 Apple Silicon 或 Intel 模拟器库。普通版本不要求 multicast 特殊 entitlement；iOS 局域网使用手动地址连接，BLE 提供附近设备发现。
+
+生成 iPhone 真机未签名 IPA：运行 `./scripts/build-ios.sh --device`，或在 GitHub Actions 运行 **Build iOS IPA**。云端自动准备 Xcode、Rust 和 XcodeGen，并输出 `CampusMesh-alpha-0.4.0-unsigned.ipa`、SHA-256 校验和及元数据。安装前需要有效的 Apple 签名与描述文件。详见 [IPA 构建与下载](docs/IOS-IPA.md)。
 
 ## 无互联网双手机起步
 

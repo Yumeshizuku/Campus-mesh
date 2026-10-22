@@ -7,6 +7,7 @@
 /android/app/.cxx/
 /android/app/src/main/jniLibs/
 /ios/Libraries/
+/ios/build/
 /ios/*.xcodeproj/
 /ios/CampusMesh/Info.plist
 /ios/CampusMesh/*.entitlements
