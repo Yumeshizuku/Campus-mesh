@@ -23,6 +23,8 @@
 | Android ARM64 Rust 交叉编译 | 通过 | `reports/android-rust.txt` |
 | Android `assembleDebug` + `lintDebug` | 通过，Lint 0 errors / 10 warnings | `reports/android-build-lint.txt`、`reports/android-lint.txt` |
 | Android GitHub 云端完整构建与 Lint | SDK 初始化、Rust/JNI/Kotlin 编译、`assembleDebug` 与 `lintDebug` 全部通过 | [运行 39763817340 的 android 任务](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340/job/119774211823) |
+| 工作流升级后的完整验证 | 核心测试、Android APK 与 Lint、iOS 模拟器编译全部通过；三个任务的 GitHub 注释均为空 | [Verify 运行 39783000526](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000526) |
+| 工作流升级后的 IPA 构建与传输 | Intel Mac 成功构建 ARM64 iPhone IPA，上传后在 Ubuntu 重新下载并完成结构与校验和检查；两个任务的 GitHub 注释均为空 | [IPA 运行 39783000531](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531) |
 | APK 签名与 16 KB zip alignment | 通过，v2 调试签名 | `reports/apk-signature.txt`、`reports/apk-alignment.txt` |
 | iOS arm64 设备 Rust 静态库 | 编译通过 | `reports/ios-rust-device.txt` |
 | iOS arm64 模拟器 Rust 静态库 | 编译通过 | `reports/ios-rust-simulator.txt` |
@@ -73,6 +75,8 @@ Android Lint 警告主要为内联界面字符串、较新版本权限属性、�
 普通机器遵循 README 和 `RUNNING.md`。本环境网络使用提供的 HTTP 代理和系统 CA 信任库；TLS 校验保持开启。JDK 必须包含编译器，单独 JRE 不能构建 APK。Android 脚本先编译 Rust，再编译原生桥接及 Kotlin；iOS 脚本构建设备与匹配主机架构的模拟器库后调用 XcodeGen/Xcodebuild。设备 IPA 的流程与状态见 [IPA 构建与下载](IOS-IPA.md)。
 
 早期 Android 云端构建因下载已废弃的 `tools` 包而中断。修复后，初始化明确安装 `platform-tools`，构建脚本也改用新版 cargo-ndk 的 `--platform 26` 参数，并将 NDK 路径统一到指定版本。2026-10-22，[运行 39763817340](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340) 的 Android、core 和 iOS 任务全部通过，对应代码提交为 `f49bf1778609b840fd89f9dbb85fe596cdb297ed`。其中 Android 完成了完整 APK 构建和 Lint 检查；此前的本地构建记录作为独立结果保留。
+
+随后又将 JavaScript Actions 更新到支持 Node.js 24 的版本，并固定使用 `ubuntu-24.04` 与 `macos-15-intel`。提交 `a8bad7b687c039c031836795b92fe6dada3c6d7b` 已完成上表中的两条工作流测试，5 个实际执行任务的注释合计为 0 错误、0 警告、0 通知。这里统计的是 GitHub 检查注释；应用编译日志中的一般提示仍按各自日志记录。IPA 的自动构建、上传、下载和校验均已实测，手动发布选项未开启，因此没有覆盖现有 Release 安装包。结构化记录见 [工作流测试结果](reports/workflow-modernization.json)。
 
 下一阶段先运行 `DEVICE-TESTS.md` 的双 Android / Android-iPhone BLE 和 LAN 用例，再验证无旁路的四手机三跳与混合链路；修复原生兼容性后逐级增加节点与负载。完整群成员协议、链路能耗评分、硬件密钥保护和生产级洪泛控制仍属未完成项，见 `LIMITATIONS.md`。
 

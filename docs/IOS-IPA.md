@@ -2,6 +2,10 @@
 
 现在可以直接通过 GitHub 上的 `Build iOS IPA` 工作流生成 iPhone 安装包。它会在 macOS 环境中准备 Xcode 26.2、Rust 1.99.1 和 XcodeGen，再将 Rust 通信核心与 SwiftUI 界面一起编译成 iPhone ARM64 应用。使用这条云端流程时，你的电脑上无需安装 Xcode。
 
+构建环境固定为 `macos-15-intel`，产物下载校验和发布任务使用 `ubuntu-24.04`。这些固定标签可以避免默认系统版本迁移带来的变化；使用 Intel 构建机时，生成的 iPhone 应用仍然是 ARM64 版本。工作流所用的 JavaScript Actions 已更新为支持 Node.js 24 的版本。
+
+新版流程已在[运行 39783000531](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)中完成实际验证：Mac 上构建和上传成功，Ubuntu 上重新下载、检查 IPA 结构及校验和也全部通过，两个任务的 GitHub 注释均为空。这次运行用于检查构建与产物传输，没有启用发布，因此下方 Release 下载文件及其校验和仍对应原先的发布记录。
+
 ## 已生成的 alpha-0.4.0
 
 `alpha-0.4.0` 的 IPA 已在 2026-10-22 成功生成并发布。你可以在 [运行 39760676278](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278) 中查看构建和上传过程，两项任务均已通过。此次使用的源码提交是 `48d71dbbd57454c4a0737f5d13413d675fe101c3`，设备版归档由 Xcode 26.2 和 iPhoneOS SDK 26.2 完成，构建配置为 Release。
@@ -19,6 +23,8 @@
 ## 云端生成
 
 打开仓库的 **Actions → Build iOS IPA → Run workflow**，选择 `main` 即可开始构建。如果希望同时发布下载文件，可以勾选 `publish_release`，构建成功后文件会上传到对应版本已有的 alpha 发布页。没有勾选时，文件仍可从 Actions 运行页面下载。影响 iOS 构建的代码推送到 `main` 后，也会自动运行这条流程。
+
+每次运行都会先在 Mac 上生成并上传 IPA，再由独立的 Ubuntu 任务重新下载，检查 IPA 结构和 SHA-256 校验和。只有构建与下载校验都通过，手动选择的发布任务才会继续。
 
 成功后，从运行页面的 Artifacts 下载 `CampusMesh-iOS-alpha-0.4.0-unsigned`，解压得到：
 

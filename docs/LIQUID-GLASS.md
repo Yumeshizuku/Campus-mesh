@@ -33,7 +33,7 @@ iOS 的 alpha-0.4.0 为聊天输入区和悬浮操作按钮加入了 Apple Liqui
 ./scripts/build-ios.sh
 ```
 
-脚本会先检查工具和 SDK，然后构建设备 Rust 库及与 Mac 架构匹配的模拟器 Rust 库，生成 Xcode 工程，最后编译模拟器 App。CI 使用 `macos-15` 和 Xcode 26.2。[GitHub Actions 运行 39758596555](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555) 已完成完整的模拟器 App 编译，其中 `ios` 和 `core` 任务均通过。
+脚本会先检查工具和 SDK，然后构建设备 Rust 库及与 Mac 架构匹配的模拟器 Rust 库，生成 Xcode 工程，最后编译模拟器 App。CI 目前固定使用 `macos-15-intel` 和 Xcode 26.2，避免默认运行器架构变化影响构建。[早期 GitHub Actions 运行 39758596555](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555) 已完成完整的模拟器 App 编译，其中 `ios` 和 `core` 任务均通过。
 
 最初在 Linux 上完成的是 Swift 语法解析、Bash/Python/YAML 检查、构建脚本的隔离模拟检查，以及源码压缩包的完整性校验。之后的 GitHub macOS 构建补上了 Swift 类型检查和链接验证。**目前还没有完成模拟器交互检查或 iPhone 真机运行测试，也没有实际运行截图。** 界面布局和玻璃渲染效果仍需要运行应用后确认。设备 IPA 的构建结果、签名状态和下载入口见 [IPA 构建与下载](IOS-IPA.md)。
 

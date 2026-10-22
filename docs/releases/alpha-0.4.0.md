@@ -15,3 +15,5 @@
 IPA 大小为 651779 字节，SHA-256 为 `bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45`。
 
 构建和发布过程可以在[这次运行记录](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278)中查看，对应源码提交为 `48d71dbbd57454c4a0737f5d13413d675fe101c3`。[此前的检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555)也已通过核心测试和 iOS 模拟器编译。
+
+构建工具随后更新到了支持 Node.js 24 的 Actions，并固定使用 macOS 15 Intel 与 Ubuntu 24.04。[新版 IPA 流程测试](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)已通过设备版编译、上传、重新下载和校验，两个任务的 GitHub 注释均为空。这次测试没有开启发布，上方下载文件和校验和仍对应原先的发布版本。

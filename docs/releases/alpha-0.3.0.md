@@ -12,3 +12,5 @@
 提供下载的 APK 来自已通过本地构建和 Lint 检查的版本，签名与 16 KB 对齐检查也已通过。无线收发和多跳通信还需要在手机上测试。
 
 在[早期 GitHub Actions 检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555)中，Android 云端任务曾因尝试下载已废弃的 `tools` 包而中断。这个问题现已修复，同时修正了新版 Rust Android 构建工具的参数，并统一了 NDK 路径。[修复后的完整检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340)已通过 Android APK 构建和 Lint，核心测试与 iOS 编译也全部成功。上方提供下载的 APK 仍是此前通过本地检查的文件。
+
+构建流程也已更新到支持 Node.js 24 的 Actions，并固定了 Linux 和 macOS 运行环境。[最新一轮验证](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000526)再次通过核心测试、Android APK 与 Lint、iOS 编译，三个任务的 GitHub 注释均为空，之前的弃用警告和环境通知已不再出现。

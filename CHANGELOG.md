@@ -2,6 +2,16 @@
 
 这里按版本记录 Campus Mesh 的主要变化。当前 Android 测试版是 `alpha-0.3.0`，iOS 测试版是 `alpha-0.4.0`；早期 0.2 的记录保留当时的版本名称。
 
+## 工作流兼容性更新 · 2026-10-22
+
+这次更新处理了 GitHub 构建页面中的旧版 Actions 弃用提示。代码检出、Java 和 Android 环境准备、Xcode 选择，以及产物上传下载组件，都已换成支持 Node.js 24 的版本。
+
+Linux 任务固定使用 Ubuntu 24.04，iOS 任务固定使用带有 Xcode 26.2 的 macOS 15 Intel 环境，避免默认 Ubuntu 版本迁移，也让构建离开当前有容量提示的 macOS ARM64 队列。iPhone 安装包仍按 ARM64 设备编译。
+
+IPA 流程增加了上传后的下载复核，会在另一台运行器上重新检查包结构和校验和，通过后才允许发布。常规验证流程也支持从 GitHub 的 Actions 页面手动启动。
+
+更新后已实际运行[核心、Android 和 iOS 验证](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000526)，以及 [IPA 构建、上传和下载校验](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)，结果全部通过。这两次运行中，5 个实际执行任务的 GitHub 注释均为空，之前的错误、弃用警告和环境通知没有再出现。此次测试没有重新发布安装包。
+
 ## Android 构建流程修复 · 2026-10-22
 
 修复了 GitHub 上 Android 构建在准备 SDK 时中断的问题。初始化步骤现在明确安装 `platform-tools`，不再尝试下载已废弃的 `tools` 包。
