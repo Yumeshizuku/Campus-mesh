@@ -3,6 +3,8 @@ import XCTest
 final class PersonalUseTests: XCTestCase {
     func testPersonalUseAndPersistence() throws {
         continueAfterFailure = false
+        // Cold first launch on hosted Intel Macs can take over 90 seconds.
+        executionTimeAllowance = 300
         let app = XCUIApplication()
         // Do not override ui.tab through launch arguments: the argument domain has
         // precedence over persisted preferences and would pin TabView to one page.
