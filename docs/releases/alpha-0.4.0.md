@@ -4,7 +4,7 @@
 
 这次也补齐了 IPA 的自动构建、打包校验和发布工具。Xcode 26.2 与 iPhoneOS SDK 26.2 已成功生成 iPhone ARM64 设备版，版本为 **alpha-0.4.0**，内部版本为 0.4.0 / build 5。发布后的 IPA 已重新下载，目录结构、设备平台标记和文件校验和均已检查通过。
 
-**当前 IPA 未签名，安装前需要有效的 Apple 签名和匹配的描述文件。应用尚未完成 iPhone 实际运行测试。**
+**个人使用可以在 Windows 或 Mac 上通过 [Sideloadly](https://sideloadly.io/)，用自己的免费 Apple 账户签名安装，无需上架。** 下载的 IPA 尚未签名，不能直接在手机上点击安装；免费账户通常需要每 7 天续签。操作步骤见 [iPhone 个人安装说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)。应用尚未完成 iPhone 真机运行测试。
 
 下载文件：
 

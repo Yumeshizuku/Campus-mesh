@@ -8,7 +8,7 @@
 
 这次 iOS 更新在 Telegram 风格的聊天界面中加入了 Apple 的 Liquid Glass。输入栏、快捷短语和发送等按钮会在 iOS 26 及以上系统显示原生玻璃效果，iOS 16–18 则使用兼容材质。你可以在设置中预览或关闭通透效果；开启系统的降低透明度或增强对比度后，这些控件会使用实色背景。
 
-模拟器编译和 iPhone 设备版归档已在 GitHub 的 Xcode 26.2 环境通过，未签名 IPA 也已发布。安装需要有效的 Apple 签名，目前还没有 iPhone 实际运行的测试结果。具体变化见 [Liquid Glass 更新说明](docs/LIQUID-GLASS.md)。Android 当前版本仍为 `alpha-0.3.0`。
+模拟器编译和 iPhone 设备版归档已在 GitHub 的 Xcode 26.2 环境通过，IPA 也已发布。个人使用可以在 Windows 或 Mac 上通过 Sideloadly，用自己的免费 Apple 账户签名安装，无需上架。下载文件尚未签名，手机安装及无线通信仍需真机确认；详细步骤见 [iPhone 个人安装说明](docs/IOS-IPA.md)。具体变化见 [Liquid Glass 更新说明](docs/LIQUID-GLASS.md)。Android 当前版本仍为 `alpha-0.3.0`。
 
 测试版统一使用 **`alpha-版本号`** 命名，应用和下载文件都会标明对应版本。各次更新汇总在 [更新日志](CHANGELOG.md)，命名规则见 [版本命名约定](docs/RELEASE-NAMING.md)。
 
