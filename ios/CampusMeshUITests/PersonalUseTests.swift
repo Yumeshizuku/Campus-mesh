@@ -13,9 +13,10 @@ final class PersonalUseTests: XCTestCase {
             return false
         }
         app.launch()
+        // Trigger permission handling before checking app content behind the alert.
+        app.tap()
         let ready = app.staticTexts["本机已就绪 · 0 位好友"]
         XCTAssertTrue(ready.waitForExistence(timeout: 30), "The real Rust core must start successfully")
-        app.tap() // Allow XCTest to handle the first-launch system permission prompt.
         capture("01-聊天")
 
         app.tabBars.buttons["附近"].tap()
