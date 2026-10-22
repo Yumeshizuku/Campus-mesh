@@ -32,3 +32,22 @@ targets:
         NSBluetoothAlwaysUsageDescription: 通过蓝牙发现同学并传递端到端加密消息。
         NSCameraUsageDescription: 扫描同学的公钥二维码添加好友。
         UIApplicationSupportsIndirectInputEvents: true
+  CampusMeshUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [CampusMeshUITests]
+    dependencies:
+      - target: CampusMesh
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.campusmesh.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  CampusMesh:
+    build:
+      targets:
+        CampusMesh: all
+    test:
+      targets: [CampusMeshUITests]
+      language: zh-Hans
+      region: CN

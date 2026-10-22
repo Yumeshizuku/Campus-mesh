@@ -68,5 +68,5 @@ if [[ "$build_mode" == --device ]]; then
     --app "$build_root/CampusMesh.xcarchive/Products/Applications/CampusMesh.app" \
     --output-dir artifacts
 else
-  xcodebuild -project CampusMesh.xcodeproj -scheme CampusMesh -sdk iphonesimulator -configuration Debug -destination "generic/platform=iOS Simulator" ARCHS="$host_arch" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
+  xcodebuild -project CampusMesh.xcodeproj -scheme CampusMesh -sdk iphonesimulator -configuration Debug -destination "generic/platform=iOS Simulator" -derivedDataPath "$PWD/build/Simulator" ARCHS="$host_arch" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO build
 fi

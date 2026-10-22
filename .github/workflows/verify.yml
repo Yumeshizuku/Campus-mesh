@@ -36,6 +36,7 @@ jobs:
       - run: cd android && ./gradlew lintDebug
   ios:
     runs-on: macos-15-intel
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: maxim-lobanov/setup-xcode@v1.7.0
@@ -45,4 +46,15 @@ jobs:
         with:
           toolchain: 1.99.1
       - run: brew install xcodegen
-      - run: ./scripts/build-ios.sh
+      - name: Build and run iPhone simulator tests
+        run: ./scripts/test-ios.sh
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: ios-personal-use-tests
+          path: |
+            ios/build/PersonalUse-*.xcresult
+            ios/build/personal-use-tests.log
+            ios/build/simulators.json
+          if-no-files-found: warn
+          retention-days: 14
