@@ -2,6 +2,14 @@
 
 这里按版本记录 Campus Mesh 的主要变化。当前 Android 测试版是 `alpha-0.3.0`，iOS 测试版是 `alpha-0.4.0`；早期 0.2 的记录保留当时的版本名称。
 
+## Android 构建流程修复 · 2026-10-22
+
+修复了 GitHub 上 Android 构建在准备 SDK 时中断的问题。初始化步骤现在明确安装 `platform-tools`，不再尝试下载已废弃的 `tools` 包。
+
+继续检查时，还发现新版 Rust Android 构建工具会把旧参数 `-p 26` 误认为包名。这次改用了明确的 `--platform 26`，新安装的 `cargo-ndk` 固定为 4.1.2，并统一了构建环境中的 NDK 路径。
+
+修复后的 Android APK 构建和 Lint 检查已经通过，同一轮的核心测试与 iOS 编译也全部成功，完整结果见[这次构建记录](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340)。
+
 ## iOS alpha-0.4.0 · 2026-10-22
 
 这次更新为 iOS 加入了 Apple 的 Liquid Glass。聊天输入栏、快捷短语、发送和“最新消息”按钮在 iOS 26 及以上系统会显示原生玻璃效果，发送按钮也会跟随你选择的主题色。应用仍支持 iOS 16，较早的系统会使用兼容材质。

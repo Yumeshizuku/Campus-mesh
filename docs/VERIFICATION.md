@@ -22,6 +22,7 @@
 | 10/30/100/300 节点移动接触仿真 | 本次全部消息、ACK 交付 | `reports/simulation.jsonl` |
 | Android ARM64 Rust 交叉编译 | 通过 | `reports/android-rust.txt` |
 | Android `assembleDebug` + `lintDebug` | 通过，Lint 0 errors / 10 warnings | `reports/android-build-lint.txt`、`reports/android-lint.txt` |
+| Android GitHub 云端完整构建与 Lint | SDK 初始化、Rust/JNI/Kotlin 编译、`assembleDebug` 与 `lintDebug` 全部通过 | [运行 39763817340 的 android 任务](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340/job/119774211823) |
 | APK 签名与 16 KB zip alignment | 通过，v2 调试签名 | `reports/apk-signature.txt`、`reports/apk-alignment.txt` |
 | iOS arm64 设备 Rust 静态库 | 编译通过 | `reports/ios-rust-device.txt` |
 | iOS arm64 模拟器 Rust 静态库 | 编译通过 | `reports/ios-rust-simulator.txt` |
@@ -69,7 +70,9 @@ Android Lint 警告主要为内联界面字符串、较新版本权限属性、�
 
 ## 可复现构建与剩余验收
 
-普通机器遵循 README 和 `RUNNING.md`。本环境网络使用提供的 HTTP 代理和系统 CA 信任库；TLS 校验保持开启。JDK 必须包含编译器，单独 JRE 不能构建 APK。Android 脚本先编译 Rust，再编译原生桥接及 Kotlin；iOS 脚本构建设备与匹配主机架构的模拟器库后调用 XcodeGen/Xcodebuild。仓库已推送并执行远程 CI：上述运行中的 core 与 ios 通过，Android 云端任务因 SDK 初始化下载已废弃的 `tools` 包失败；此前本地 Android APK 与 Lint 结果保持为独立证据。设备 IPA 的流程与状态见 [IPA 构建与下载](IOS-IPA.md)。
+普通机器遵循 README 和 `RUNNING.md`。本环境网络使用提供的 HTTP 代理和系统 CA 信任库；TLS 校验保持开启。JDK 必须包含编译器，单独 JRE 不能构建 APK。Android 脚本先编译 Rust，再编译原生桥接及 Kotlin；iOS 脚本构建设备与匹配主机架构的模拟器库后调用 XcodeGen/Xcodebuild。设备 IPA 的流程与状态见 [IPA 构建与下载](IOS-IPA.md)。
+
+早期 Android 云端构建因下载已废弃的 `tools` 包而中断。修复后，初始化明确安装 `platform-tools`，构建脚本也改用新版 cargo-ndk 的 `--platform 26` 参数，并将 NDK 路径统一到指定版本。2026-10-22，[运行 39763817340](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39763817340) 的 Android、core 和 iOS 任务全部通过，对应代码提交为 `f49bf1778609b840fd89f9dbb85fe596cdb297ed`。其中 Android 完成了完整 APK 构建和 Lint 检查；此前的本地构建记录作为独立结果保留。
 
 下一阶段先运行 `DEVICE-TESTS.md` 的双 Android / Android-iPhone BLE 和 LAN 用例，再验证无旁路的四手机三跳与混合链路；修复原生兼容性后逐级增加节点与负载。完整群成员协议、链路能耗评分、硬件密钥保护和生产级洪泛控制仍属未完成项，见 `LIMITATIONS.md`。
 
