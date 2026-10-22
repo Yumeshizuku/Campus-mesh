@@ -1,0 +1,12 @@
+<resources>
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mesh_teal</item>
+        <item name="colorSecondary">@color/mesh_teal</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#163D38</item>
+    </style>
+    <style name="AppThemeBlue" parent="AppTheme"><item name="colorPrimary">@color/mesh_blue</item><item name="colorSecondary">@color/mesh_blue</item></style>
+    <style name="AppThemeViolet" parent="AppTheme"><item name="colorPrimary">@color/mesh_violet</item><item name="colorSecondary">@color/mesh_violet</item></style>
+    <style name="AppThemeAmber" parent="AppTheme"><item name="colorPrimary">@color/mesh_amber</item><item name="colorSecondary">@color/mesh_amber</item></style>
+</resources>

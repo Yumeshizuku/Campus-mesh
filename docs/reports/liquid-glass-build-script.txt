@@ -1,0 +1,28 @@
+Campus Mesh Liquid Glass iOS build-script validation
+Checked at: 2026-10-22T08:57:59.717345+00:00
+Host: Linux x86_64
+Scope: Bash syntax, workflow YAML/configuration, and isolated mocked command flow.
+No real Xcode/Swift compiler, Apple SDK, simulator, code signing, or device build was run.
+Mock Rust outputs are empty temporary files; they never enter project Libraries or delivery artifacts.
+
+SHA256 941f998767426f2f7963e12e3eb38c6085863c88aedd2ef5e3fdc82bf3379142  scripts/build-ios.sh
+SHA256 c47ad02a5765ab44d0832af8068940e7e3da0611af57d6c85eef76a635a3b4a4  .github/workflows/verify.yml
+PASS bash -n scripts/build-ios.sh
+PASS workflow YAML: macos-15, explicit Xcode 26.2, iOS build-script invocation
+PASS mocked ARM64: device + aarch64-apple-ios-sim Rust commands, both dummy library copies, XcodeGen, generic simulator build flags
+  Xcode 26.2, SDKs 26.2/26.2, ARCHS=arm64, ONLY_ACTIVE_ARCH=YES, CODE_SIGNING_ALLOWED=NO
+PASS mocked Intel: device + x86_64-apple-ios Rust commands, both dummy library copies, XcodeGen, generic simulator build flags
+  Xcode 26.2, SDKs 26.2/26.2, ARCHS=x86_64, ONLY_ACTIVE_ARCH=YES, CODE_SIGNING_ALLOWED=NO
+PASS mocked Old Xcode: rejected before Rust/build/artifact work (Xcode 16.4, device SDK 26.2, simulator SDK 26.2)
+  Diagnostic: Select Xcode 26+ using xcode-select or DEVELOPER_DIR; older Xcode cannot validate Liquid Glass.
+PASS mocked Old device SDK: rejected before Rust/build/artifact work (Xcode 26.2, device SDK 18.5, simulator SDK 26.2)
+  Diagnostic: The active iphoneos SDK is 18.5; iOS 26+ SDKs are required (deployment remains iOS 16).
+PASS mocked Old simulator SDK: rejected before Rust/build/artifact work (Xcode 26.2, device SDK 26.2, simulator SDK 18.5)
+  Diagnostic: The active iphonesimulator SDK is 18.5; iOS 26+ SDKs are required (deployment remains iOS 16).
+PASS real Linux-host invocation: exits 1 before compilation with macOS/Xcode requirement
+  Diagnostic: iOS builds require macOS + Xcode 26 or newer.
+
+Result: all listed script/configuration checks passed.
+Limitation: mocks verify command routing and early rejection only. A real Xcode 26+ build, iOS runtime checks, and physical-device validation remain pending.
+Runner inventory consulted: https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
+CI configuration selects Xcode 26.2 explicitly; macos-15 default Xcode was 16.4 in the consulted inventory.

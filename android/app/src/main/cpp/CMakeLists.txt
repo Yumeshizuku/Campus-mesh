@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(mesh_jni C)
+add_library(campus_mesh SHARED IMPORTED)
+set_target_properties(campus_mesh PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libcampus_mesh.so")
+add_library(mesh_jni SHARED bridge.c)
+target_link_libraries(mesh_jni campus_mesh)

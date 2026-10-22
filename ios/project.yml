@@ -1,0 +1,34 @@
+name: CampusMesh
+options:
+  deploymentTarget:
+    iOS: '16.0'
+settings:
+  base:
+    MARKETING_VERSION: 0.4.0
+    CURRENT_PROJECT_VERSION: 5
+    SWIFT_VERSION: '5.0'
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  CampusMesh:
+    type: application
+    platform: iOS
+    sources: [CampusMesh]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.campusmesh.app
+        SWIFT_OBJC_BRIDGING_HEADER: CampusMesh/Bridge.h
+        LIBRARY_SEARCH_PATHS: ['$(inherited)', '$(PROJECT_DIR)/Libraries/$(PLATFORM_NAME)']
+        OTHER_LDFLAGS: ['$(inherited)', '-lcampus_mesh', '-lresolv', '-liconv']
+        ENABLE_BITCODE: NO
+    info:
+      path: CampusMesh/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: Campus Mesh alpha
+        CMReleaseChannel: alpha
+        UILaunchScreen: {}
+        NSLocalNetworkUsageDescription: 在获得许可的局域网内发现同学并传递加密消息，无需互联网。
+        NSBluetoothAlwaysUsageDescription: 通过蓝牙发现同学并传递端到端加密消息。
+        NSCameraUsageDescription: 扫描同学的公钥二维码添加好友。
+        UIApplicationSupportsIndirectInputEvents: true

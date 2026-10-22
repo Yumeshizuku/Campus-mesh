@@ -1,0 +1,12 @@
+{
+  "version": "0.3.0",
+  "version_code": 3,
+  "abi": "arm64-v8a",
+  "bytes": 6947930,
+  "sha256": "1223f4adee78b2f21a613e3ed89a8f12b351ddd06c6e1f9bd57621fddcd35a70",
+  "android_build": "PASS",
+  "android_lint_errors": 0,
+  "android_lint_warnings": 9,
+  "ios_xcode_build": "NOT_RUN",
+  "runtime_ui_verification": "NOT_RUN"
+}

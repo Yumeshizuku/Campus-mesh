@@ -1,0 +1,37 @@
+Liquid Glass iOS 0.4.0 static checks
+Environment: Linux; no Swift compiler, Apple SDK, Xcode, iOS simulator or iPhone.
+
+Swift syntax PASS: ios/CampusMesh/AppearanceSettings.swift
+Swift syntax PASS: ios/CampusMesh/BLEMesh.swift
+Swift syntax PASS: ios/CampusMesh/CampusMeshApp.swift
+Swift syntax PASS: ios/CampusMesh/ContentView.swift
+Swift syntax PASS: ios/CampusMesh/LiquidGlassStyle.swift
+Swift syntax PASS: ios/CampusMesh/QRScanner.swift
+Swift syntax PASS: ios/CampusMesh/SettingsViews.swift
+Swift syntax PASS: ios/CampusMesh/TelegramStyle.swift
+
+Swift parsing checks grammar only; no type checking, linking, availability checking or rendered UI validation.
+Bash syntax PASS: scripts/build-ios.sh
+YAML parse PASS: ios/project.yml
+YAML parse PASS: .github/workflows/verify.yml
+Configuration PASS: iOS 16 deployment, release 0.4.0/build 4, CI macos-15/Xcode 26.2
+Python syntax PASS: scripts/package-delivery.py
+Linux build invocation: expected unavailable-platform exit 1: iOS builds require macOS + Xcode 26 or newer.
+
+No Xcode build was run. Native Apple APIs were compared with official documentation and reviewed independently.
+Build-script mock checks are recorded separately in liquid-glass-build-script.txt.
+Android and Rust communication sources were not changed; previous validation remains documented in earlier reports.
+
+Reference archive comparison PASS: Campus-Mesh-0.3.0-delivery.zip
+All existing core/ and android/ files byte-identical to the prior delivery.
+ChatRoom send implementation, MessageBubble and GroupEditor byte-identical to the prior delivery.
+Modified existing source/config/docs:
+.github/workflows/verify.yml
+README.md
+docs/RUNNING.md
+ios/CampusMesh/AppearanceSettings.swift
+ios/CampusMesh/ContentView.swift
+ios/CampusMesh/SettingsViews.swift
+ios/project.yml
+scripts/build-ios.sh
+scripts/package-delivery.py

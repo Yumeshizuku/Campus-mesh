@@ -1,0 +1,23 @@
+{
+  "naming": "alpha-<major>.<minor>.<patch>",
+  "android": {
+    "version": "alpha-0.3.0",
+    "versionCode": 4,
+    "applicationLabel": "Campus Mesh alpha",
+    "apk": "CampusMesh-alpha-0.3.0-debug-arm64.apk",
+    "sha256": "99db4ff92665a75cd52d412edb4b497e21fdab9ddccfb3febdea268ad193163f",
+    "bytes": 6886079,
+    "build": "assembleDebug + lintDebug passed; offline",
+    "signature": "verified; same certificate as previous 0.3.0 APK",
+    "alignment": "16 KB check passed"
+  },
+  "ios": {
+    "displayVersion": "alpha-0.4.0",
+    "marketingVersion": "0.4.0",
+    "build": 5,
+    "channel": "alpha",
+    "checks": "8 Swift files syntax parsed; project YAML parsed; no Xcode build or runtime verification"
+  },
+  "packaging": "Reads platform metadata and enforces alpha-semver test version format; Python syntax passed.",
+  "reportScope": "Naming/metadata update. Historical validation records retain their original versions."
+}

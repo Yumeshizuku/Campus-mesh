@@ -1,0 +1,45 @@
+   Compiling campus-mesh v0.1.0 (/workspace/campus-mesh/core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.74s
+     Running unittests src/lib.rs (target/debug/deps/campus_mesh-9399fcebfd30eab0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/mesh-node.rs (target/debug/deps/mesh_node-cdcc6b6eabe6adb6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/mesh-sim.rs (target/debug/deps/mesh_sim-5571bbd5b331b694)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/mesh.rs (target/debug/deps/mesh-678a90fefd365f90)
+
+running 9 tests
+test bounded_frame_and_group_fanout ... ok
+test partition_restart_dedup_ttl_and_relay_optout ... ok
+test persistence_permissions_expiry_and_batch_fairness ... ok
+test encrypted_three_hops_and_receipt ... ok
+test signature_tamper_unknown_sender_and_hop_budget ... ok
+test unicode_nickname_stays_within_wire_identity_limit ... ok
+test ffi_unicode_lock_and_fail_closed_restore ... ok
+virtual nodes=10, partition delay=199s, delivery=1/1, hops=3
+test real_tcp_delivery_and_ack ... ok
+virtual nodes=30, partition delay=199s, delivery=1/1, hops=3
+virtual nodes=100, partition delay=199s, delivery=1/1, hops=3
+virtual nodes=300, partition delay=199s, delivery=1/1, hops=3
+test ten_to_three_hundred_virtual_nodes ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.52s
+
+   Doc-tests campus_mesh
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

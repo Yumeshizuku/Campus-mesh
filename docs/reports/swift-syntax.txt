@@ -1,0 +1,4 @@
+BLEMesh.swift syntax_errors= False
+CampusMeshApp.swift syntax_errors= False
+QRScanner.swift syntax_errors= False
+Parser check only; NOT a Swift type check, Xcode build, or device test.

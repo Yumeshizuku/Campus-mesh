@@ -1,0 +1,8 @@
+AppearanceSettings.swift syntax_errors= False
+BLEMesh.swift syntax_errors= False
+CampusMeshApp.swift syntax_errors= False
+ContentView.swift syntax_errors= False
+QRScanner.swift syntax_errors= False
+SettingsViews.swift syntax_errors= False
+TelegramStyle.swift syntax_errors= False
+Parser only; not a Swift type check, Xcode build, or runtime verification.

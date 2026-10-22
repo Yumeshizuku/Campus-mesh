@@ -1,0 +1,17 @@
+[
+  {
+    "path": "artifacts/CampusMesh-0.1.0-debug-arm64.apk",
+    "bytes": 7872966,
+    "sha256": "cbd2f9be411340f758963582f7e93fa0c7db14bb9c46a53478c15e879c6d3a03"
+  },
+  {
+    "path": "target/aarch64-apple-ios/release/libcampus_mesh.a",
+    "bytes": 20207744,
+    "sha256": "f0943aa576d521aec2f43af074447cb1384db429203b0b5298e44366486e559e"
+  },
+  {
+    "path": "target/aarch64-apple-ios-sim/release/libcampus_mesh.a",
+    "bytes": 20200696,
+    "sha256": "737a96b0724ca85ff3f41554824247c0b05897fb8ec9eedb4c2bbc610c8118ee"
+  }
+]

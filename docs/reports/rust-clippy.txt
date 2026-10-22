@@ -1,0 +1,2 @@
+    Checking campus-mesh v0.1.0 (/workspace/campus-mesh/core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.63s

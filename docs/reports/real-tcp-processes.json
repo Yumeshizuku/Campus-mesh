@@ -1,0 +1,1 @@
+{"result": "PASS", "processes": 4, "transport": "real loopback TCP", "topology": "A-B-C-D", "forward_hops": 3, "relay_B_restarted_with_queued_ciphertext": true, "relay_C_reconnected": true, "recipient_copies": 1, "end_to_end_ACK": true, "relay_plaintext_history": false, "elapsed_seconds": 25.76}

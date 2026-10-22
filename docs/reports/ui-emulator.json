@@ -1,0 +1,8 @@
+{
+  "result": "NOT_COMPLETED",
+  "environment": "Android API 35 x86_64 software emulator, no /dev/kvm",
+  "reason": "Cold boot did not finish within this verification window; app installation and UI smoke test not completed.",
+  "app_runtime_verified": false,
+  "screenshots_generated": false,
+  "radio_or_physical_device_test": false
+}
