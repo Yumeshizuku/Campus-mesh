@@ -26,6 +26,9 @@ jobs:
         with:
           toolchain: 1.99.1
       - uses: android-actions/setup-android@v3
+        with:
+          # The action defaults to the retired "tools" package as well.
+          packages: platform-tools
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" ./scripts/build-android.sh
       - run: cd android && ./gradlew lintDebug
