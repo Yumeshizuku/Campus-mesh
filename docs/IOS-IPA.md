@@ -2,6 +2,20 @@
 
 `Build iOS IPA` 工作流在 GitHub 的 macOS 环境使用 Xcode 26.2、Rust 1.99.1 和 XcodeGen，从 Rust 核心与 SwiftUI 源码编译 iPhone ARM64 应用。无需在 Linux 或用户电脑安装 Xcode 插件。
 
+## 已生成的 alpha-0.4.0
+
+2026-10-22，[运行 39760676278](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278) 的 `build` 与 `publish` 均成功。构建源码提交为 `48d71dbbd57454c4a0737f5d13413d675fe101c3`；Xcode 26.2 / iPhoneOS SDK 26.2 完成 Release 设备归档。
+
+[下载未签名 IPA](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa) · [SHA-256](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.sha256) · [版本与平台元数据](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.json)
+
+- 版本：`alpha-0.4.0` / build `5`；最低 iOS `16.0`。
+- 大小：`651779` 字节；应用标识：`org.campusmesh.app`。
+- SHA-256：`bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45`。
+- 已从 Release 重新下载，检查 Payload、ARM64 / IOS Mach-O 平台、执行权限与校验和，结果通过。
+- 打包器的 7 项回归测试通过，包括模拟器、签名输入、符号链接与缺失执行权限的拒绝检查。
+
+这是未签名设备构建，尚未进行 iPhone 安装及运行验收。
+
 ## 云端生成
 
 打开仓库的 **Actions → Build iOS IPA → Run workflow**，选择 `main`。勾选 `publish_release` 会把成功构建的文件上传到版本对应的现有 alpha 预发布页面；不勾选则仅保存 Actions 产物。影响 iOS 构建的代码推送到 `main` 也会自动生成产物。

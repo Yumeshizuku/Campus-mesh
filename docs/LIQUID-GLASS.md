@@ -33,9 +33,9 @@
 ./scripts/build-ios.sh
 ```
 
-脚本先检查工具与 SDK，再构建设备及与主机架构匹配的模拟器 Rust 库，生成 Xcode 工程并编译模拟器 App。CI 配置选择 `macos-15` 与 Xcode 26.2；没有推送仓库或触发远程 CI。
+脚本先检查工具与 SDK，再构建设备及与主机架构匹配的模拟器 Rust 库，生成 Xcode 工程并编译模拟器 App。CI 配置选择 `macos-15` 与 Xcode 26.2。[GitHub Actions 运行 39758596555](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555) 的 `ios` 任务已完成完整模拟器 App 编译，`core` 任务也通过。
 
-本轮当前 Linux 环境仅执行 Swift 语法解析、Bash/Python/YAML 检查、构建脚本的隔离模拟验证和源码压缩包完整性校验。记录见 `reports/liquid-glass-checks.txt`。**没有 Swift 类型检查、Xcode App 编译、iOS 模拟器或 iPhone 实际运行结果，也没有签名 IPA 或运行截图。** 语法解析不能确认 SwiftUI 类型、运行时布局或玻璃渲染效果。
+最初的 Linux 阶段仅执行 Swift 语法解析、Bash/Python/YAML 检查、构建脚本的隔离模拟验证和源码压缩包完整性校验。后续 GitHub macOS 编译已验证 Swift 类型检查与链接。**尚未完成模拟器交互检查或 iPhone 真机运行验证，也没有运行截图。** 编译通过不能确认运行时布局或玻璃渲染效果。设备版 IPA 构建、签名状态与下载方式见 [IPA 构建与下载](IOS-IPA.md)。
 
 在 Mac/设备上仍需完成：
 

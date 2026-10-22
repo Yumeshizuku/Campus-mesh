@@ -61,7 +61,7 @@ iOS：需要 macOS、Xcode 26 或更新版本（含 iOS 26+ SDK）、XcodeGen、
 
 随后打开 `ios/CampusMesh.xcodeproj`，选择自己的开发团队和设备。iOS 最低 16，构建脚本按 Mac 主机架构选择 Apple Silicon 或 Intel 模拟器库。普通版本不要求 multicast 特殊 entitlement；iOS 局域网使用手动地址连接，BLE 提供附近设备发现。
 
-生成 iPhone 真机未签名 IPA：运行 `./scripts/build-ios.sh --device`，或在 GitHub Actions 运行 **Build iOS IPA**。云端自动准备 Xcode、Rust 和 XcodeGen，并输出 `CampusMesh-alpha-0.4.0-unsigned.ipa`、SHA-256 校验和及元数据。安装前需要有效的 Apple 签名与描述文件。详见 [IPA 构建与下载](docs/IOS-IPA.md)。
+生成 iPhone 真机未签名 IPA：运行 `./scripts/build-ios.sh --device`，或在 GitHub Actions 运行 **Build iOS IPA**。云端自动准备 Xcode、Rust 和 XcodeGen，并输出 `CampusMesh-alpha-0.4.0-unsigned.ipa`、SHA-256 校验和及元数据。当前版本已成功构建、发布并下载复核：[下载未签名 IPA](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa)。安装前需要有效的 Apple 签名与描述文件。详见 [IPA 构建与下载](docs/IOS-IPA.md)。
 
 ## 无互联网双手机起步
 

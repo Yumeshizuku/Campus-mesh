@@ -8,7 +8,7 @@
 
 本轮实际使用：Linux x86_64、Rust 1.99.1、Temurin JDK 21.0.12.1、Gradle 8.10.2、AGP 8.7.3、Kotlin 2.1.0、Android Platform 35、Build Tools 35.0.0、NDK 27.2.12479018、CMake 3.22.1、Python 3。依赖由 Cargo.lock 和 Gradle 配置指定；Gradle distribution 有 SHA-256 校验。工具安装在本次临时环境，不将本机绝对 SDK 路径写入项目配置。
 
-当前无 macOS/Xcode，`adb devices -l` 未发现任何设备，未获得手机蓝牙射频访问。因此没有 iOS App 编译结果、手机安装运行结果或真实无线容量数据。
+最初的 Linux 验证环境无 macOS/Xcode，`adb devices -l` 未发现任何设备，未获得手机蓝牙射频访问。后续已接入 GitHub macOS/Xcode 云端编译；手机安装运行与真实无线容量仍需设备验收。
 
 ## 已执行结果
 
@@ -26,7 +26,8 @@
 | iOS arm64 设备 Rust 静态库 | 编译通过 | `reports/ios-rust-device.txt` |
 | iOS arm64 模拟器 Rust 静态库 | 编译通过 | `reports/ios-rust-simulator.txt` |
 | Swift 源码解析 | 无语法解析错误；不等于类型检查/构建 | `reports/swift-syntax.txt` |
-| iOS SwiftUI/CoreBluetooth App 编译 | **未执行，需要 macOS/Xcode** | — |
+| iOS SwiftUI/CoreBluetooth App 模拟器编译 | GitHub macOS / Xcode 26.2 编译通过 | [运行 39758596555 的 ios 任务](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555) |
+| iPhone ARM64 Release 归档及 IPA 发布 | 成功；未签名 IPA 下载后的结构、平台与 SHA-256 检查通过 | [运行 39760676278](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278)、[IPA 记录](IOS-IPA.md) |
 | BLE / Wi-Fi Direct / 手机 LAN / 无线多跳 | **未执行，需要真机** | `DEVICE-TESTS.md` 待执行清单 |
 
 Android Lint 警告主要为内联界面字符串、较新版本权限属性、依赖更新提示与缺少 x86_64 ChromeOS ABI。未忽略 Lint 错误。为兼容旧版 Android 保留了一些已弃用 GATT API，构建有对应 deprecation warnings。Rust ELF LOAD segment 已设为 0x4000 对齐，JNI CMake 也开启 flexible page sizes；APK alignment 检查不代表 16 KB 真机运行已经通过。
@@ -68,8 +69,8 @@ Android Lint 警告主要为内联界面字符串、较新版本权限属性、�
 
 ## 可复现构建与剩余验收
 
-普通机器遵循 README 和 `RUNNING.md`。本环境网络使用提供的 HTTP 代理和系统 CA 信任库；TLS 校验保持开启。JDK 必须包含编译器，单独 JRE 不能构建 APK。Android 脚本先编译 Rust，再编译原生桥接及 Kotlin；iOS 脚本构建设备与匹配主机架构的模拟器库后调用 XcodeGen/Xcodebuild。仓库内附 CI 配置，但未推送或触发远程 CI，不能将其视为已执行记录。
+普通机器遵循 README 和 `RUNNING.md`。本环境网络使用提供的 HTTP 代理和系统 CA 信任库；TLS 校验保持开启。JDK 必须包含编译器，单独 JRE 不能构建 APK。Android 脚本先编译 Rust，再编译原生桥接及 Kotlin；iOS 脚本构建设备与匹配主机架构的模拟器库后调用 XcodeGen/Xcodebuild。仓库已推送并执行远程 CI：上述运行中的 core 与 ios 通过，Android 云端任务因 SDK 初始化下载已废弃的 `tools` 包失败；此前本地 Android APK 与 Lint 结果保持为独立证据。设备 IPA 的流程与状态见 [IPA 构建与下载](IOS-IPA.md)。
 
 下一阶段先运行 `DEVICE-TESTS.md` 的双 Android / Android-iPhone BLE 和 LAN 用例，再验证无旁路的四手机三跳与混合链路；修复原生兼容性后逐级增加节点与负载。完整群成员协议、链路能耗评分、硬件密钥保护和生产级洪泛控制仍属未完成项，见 `LIMITATIONS.md`。
 
-当前阻塞来自缺少 macOS/Xcode 和真实 Android/iOS 设备，而非用户授权问题；没有请求额外安装学校电脑软件或绕过权限。
+GitHub macOS 环境已补齐 Xcode 编译能力。剩余真机验收需要真实 Android/iOS 设备，普通 iPhone 安装还需要有效 Apple 签名与匹配的描述文件。
