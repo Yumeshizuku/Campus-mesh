@@ -523,7 +523,7 @@ class MainActivity : AppCompatActivity() {
         else "peer:" + message.optString("peer")
 
     private fun titleFor(key: String) =
-        if (key.startsWith("group:")) key.removePrefix("group:")
+        if (key.startsWith("group:")) groupTitle(key.removePrefix("group:"))
         else contacts().find { it.first == key.removePrefix("peer:") }?.second ?: "同学"
 
     private fun buildThreads() {
@@ -540,7 +540,7 @@ class MainActivity : AppCompatActivity() {
         }
         body.addView(field)
         val filters = LinearLayout(this).apply { setPadding(dp(8), 0, dp(8), 0) }
-        listOf("all" to "全部", "peer" to "私聊", "group" to "群发").forEach { (id, name) ->
+        listOf("all" to "全部", "peer" to "私聊", "group" to "群聊").forEach { (id, name) ->
             filters.addView(
                 button(if (id == threadFilter) "• $name" else name) {
                     threadFilter = id
@@ -581,7 +581,7 @@ class MainActivity : AppCompatActivity() {
         val latest = records.groupBy { threadKey(it) }.mapValues { it.value.last() }
         val names = contacts().toMap()
         fun title(key: String) =
-            if (key.startsWith("group:")) key.removePrefix("group:")
+            if (key.startsWith("group:")) groupTitle(key.removePrefix("group:"))
             else names[key.removePrefix("peer:")] ?: "同学"
         val unreadCounts =
             records
@@ -713,7 +713,7 @@ class MainActivity : AppCompatActivity() {
         val pins = ui.getStringSet("pins", emptySet()) ?: emptySet()
         return all.keys()
             .asSequence()
-            .map { it to all.getJSONObject(it).optString("nickname", "同学") }
+            .map { it to all.getJSONObject(it).optString("display_name", "同学") }
             .sortedWith(
                 compareByDescending<Pair<String, String>> { pins.contains(it.first) }
                     .thenBy { it.second }
@@ -721,14 +721,17 @@ class MainActivity : AppCompatActivity() {
             .toList()
     }
 
-    private fun groups(): JSONObject =
-        runCatching { JSONObject(ui.getString("groups", "{}")!!) }.getOrDefault(JSONObject())
+    private fun groups(): JSONObject = data.optJSONObject("groups") ?: JSONObject()
+    private fun groupTitle(id: String) = groups().optJSONObject(id)?.optString("name") ?: "旧群聊记录"
+    private fun deviceId() = data.optString("device_id")
+    private fun displayName(id: String, fallback: String = "同学") =
+        data.optJSONObject("contacts")?.optJSONObject(id)?.optString("display_name") ?: fallback
 
     private fun groupName() = conversation.removePrefix("group:")
 
     private fun conversationTitle(): String =
         when {
-            conversation.startsWith("group:") -> "群发 · ${groupName()}"
+            conversation.startsWith("group:") -> "群聊 · ${groupTitle(groupName())}"
             conversation.startsWith("peer:") ->
                 contacts().find { it.first == conversation.removePrefix("peer:") }?.second ?: "选择会话"
             else -> "选择一位同学开始聊天"
@@ -742,7 +745,7 @@ class MainActivity : AppCompatActivity() {
             contacts.map {
                 (if (ui.getStringSet("pins", emptySet())!!.contains(it.first)) "★ " else "") +
                     it.second
-            } + groupKeys.map { "群发 · $it" } + "＋ 保存常用群发"
+            } + groupKeys.map { "群聊 · ${groupTitle(it)}" } + "＋ 创建群聊"
         AlertDialog.Builder(this)
             .setTitle("新建会话")
             .setItems(titles.toTypedArray()) { _, index ->
@@ -966,7 +969,7 @@ class MainActivity : AppCompatActivity() {
             if (incoming && conversation.startsWith("group:"))
                 bubble.addView(
                     label(
-                        contacts().find { it.first == message.optString("peer") }?.second ?: "同学",
+                        displayName(message.optString("peer"), message.optString("sender_name", "同学")),
                         12f,
                         true,
                     )
@@ -981,6 +984,11 @@ class MainActivity : AppCompatActivity() {
                 when (message.optString("status")) {
                     "queued" -> "等待送达"
                     "delivered" -> "已送达"
+                    "partially_delivered" -> {
+                        val delivery = message.optJSONObject("delivery") ?: JSONObject()
+                        val delivered = delivery.keys().asSequence().count { delivery.optString(it) == "delivered" }
+                        "已送达 $delivered/${delivery.length()}"
+                    }
                     "received" -> "已收到"
                     "expired" -> "已过期"
                     else -> "待同步"
@@ -1025,160 +1033,142 @@ class MainActivity : AppCompatActivity() {
     private fun send() {
         val text = composer?.text?.toString() ?: return
         if (text.isBlank() || conversation.isBlank()) return
-        if (text.toByteArray(Charsets.UTF_8).size > 8192) {
-            notice("消息过长，请控制在 8192 字节以内")
-            return
-        }
+        if (text.toByteArray(Charsets.UTF_8).size > 8192) { notice("消息过长，请控制在 8192 字节以内"); return }
         val group = conversation.startsWith("group:")
-        val targets =
-            if (group)
-                groups().optJSONArray(groupName())?.let { array ->
-                    (0 until array.length()).map { array.getString(it) }
-                } ?: emptyList()
-            else listOf(conversation.removePrefix("peer:"))
-        if (targets.isEmpty()) {
-            notice("请先选择群发成员")
-            return
+        val result = request(if (group) "group_send" else "send") {
+            it.put(if (group) "id" else "to", if (group) groupName() else conversation.removePrefix("peer:"))
+                .put("text", text)
         }
-        val retryKey = "retry:$conversation"
-        val saved =
-            runCatching { JSONObject(ui.getString(retryKey, "{}")!!) }.getOrDefault(JSONObject())
-        val pending =
-            if (saved.optString("text") == text && saved.has("remaining"))
-                saved
-                    .getJSONArray("remaining")
-                    .let { a ->
-                        (0 until a.length()).map { a.getString(it) }.filter { targets.contains(it) }
-                    }
-                    .toMutableList()
-            else targets.toMutableList()
-        if (pending.isEmpty()) {
-            notice("群发成员已变化，请重新检查会话")
-            return
-        }
-        var count = 0
-        for (id in pending.toList()) {
-            if (
-                request("send") {
-                    it.put("to", id).put("text", text)
-                    if (group) it.put("group", groupName())
-                } != null
-            ) {
-                pending.remove(id)
-                count++
-                ui.edit()
-                    .putString(
-                        retryKey,
-                        JSONObject()
-                            .put("text", text)
-                            .put("remaining", JSONArray(pending))
-                            .toString(),
-                    )
-                    .apply()
-            }
-        }
-        if (pending.isEmpty()) {
-            ui.edit().remove(retryKey).apply()
-            composer?.setText("")
-        } else notice("本次已提交 $count 条，仍有 ${pending.size} 位未完成；保留草稿，再次发送仅重试未完成成员。")
+        if (result != null) composer?.setText("")
         refreshState()
     }
 
     private fun editGroup(existing: String? = null) {
-        val known = contacts()
-        if (known.isEmpty()) {
-            notice("先扫码添加好友，再保存常用群发")
-            return
-        }
-        val name = input("例如：自习小组").apply { setText(existing ?: "") }
-        AlertDialog.Builder(this)
-            .setTitle("常用群发名称")
-            .setMessage("本机保存成员组合，不会自动创建或分发群名册。")
-            .setView(name)
-            .setPositiveButton("选择成员") { _, _ ->
+        val record = groups().optJSONObject(existing ?: "")
+        val oldMembers = record?.optJSONObject("members") ?: JSONObject()
+        val known = (contacts() + oldMembers.keys().asSequence().map { it to oldMembers.getJSONObject(it).optString("nickname", "同学") }.toList())
+            .distinctBy { it.first }.filter { it.first != deviceId() }
+        val name = input("例如：自习小组").apply { setText(record?.optString("name") ?: "") }
+        AlertDialog.Builder(this).setTitle(if (existing == null) "创建群聊" else "修改群聊")
+            .setMessage("群主可管理成员，最多 32 人。可以先建群，再通过邀请二维码添加成员。")
+            .setView(name).setPositiveButton("选择成员") { _, _ ->
                 val title = name.text.toString().trim()
-                if (title.isBlank() || title.toByteArray(Charsets.UTF_8).size > 128) {
-                    notice("名称不能为空，且最多 128 字节")
-                    return@setPositiveButton
+                if (title.isBlank() || title.toByteArray(Charsets.UTF_8).size > 96) {
+                    notice("名称不能为空，且最多 96 字节"); return@setPositiveButton
                 }
-                if (title != existing && groups().has(title)) {
-                    notice("已有同名常用群发，请从会话菜单编辑或使用其他名称")
-                    return@setPositiveButton
-                }
-                val old = groups().optJSONArray(existing ?: title) ?: JSONArray()
-                val members = (0 until old.length()).map { old.getString(it) }.toSet()
-                val selected = BooleanArray(known.size) { members.contains(known[it].first) }
-                AlertDialog.Builder(this)
-                    .setTitle("选择已交换公钥的同学")
-                    .setMultiChoiceItems(known.map { it.second }.toTypedArray(), selected) {
-                        _,
-                        i,
-                        checked ->
-                        selected[i] = checked
-                    }
+                val selected = BooleanArray(known.size) { oldMembers.has(known[it].first) }
+                AlertDialog.Builder(this).setTitle("邀请好友或保留已有成员")
+                    .setMultiChoiceItems(known.map { it.second }.toTypedArray(), selected) { _, i, checked -> selected[i] = checked }
                     .setPositiveButton("保存") { _, _ ->
                         val chosen = known.filterIndexed { i, _ -> selected[i] }.map { it.first }
-                        if (chosen.isEmpty()) {
-                            notice("至少选择一位成员")
-                            return@setPositiveButton
+                        val result = request(if (existing == null) "group_create" else "group_edit") {
+                            it.put("name", title).put("members", JSONArray(chosen))
+                            if (existing != null) it.put("id", existing)
                         }
-                        val presets = groups()
-                        if (existing != null && existing != title) presets.remove(existing)
-                        presets.put(title, JSONArray(chosen))
-                        ui.edit()
-                            .putString("groups", presets.toString())
-                            .remove("retry:group:$title")
-                            .apply()
-                        selectConversation("group:$title")
-                    }
-                    .setNegativeButton("取消", null)
-                    .show()
-            }
-            .setNegativeButton("取消", null)
-            .show()
+                        if (result != null) { refreshState(); selectConversation("group:" + (existing ?: result.getString("id"))) }
+                    }.setNegativeButton("取消", null).show()
+            }.setNegativeButton("取消", null).show()
     }
 
     private fun conversationActions() {
-        if (conversation.isBlank()) {
-            chooseConversation()
-            return
-        }
-        if (conversation.startsWith("group:"))
-            AlertDialog.Builder(this)
-                .setTitle(conversationTitle())
-                .setItems(arrayOf("编辑成员", "移除本机常用群发（保留聊天记录）")) { _, index ->
-                    if (index == 0) editGroup(groupName())
-                    else {
-                        val presets = groups()
-                        presets.remove(groupName())
-                        ui.edit().putString("groups", presets.toString()).apply()
-                        selectConversation("")
+        if (conversation.isBlank()) { chooseConversation(); return }
+        if (conversation.startsWith("group:")) {
+            val id = groupName()
+            val group = groups().optJSONObject(id)
+            val members = group?.optJSONObject("members") ?: JSONObject()
+            val owner = group?.optJSONObject("owner")?.optString("sign") == data.optJSONObject("identity")?.optString("sign")
+            val active = group?.optBoolean("joined") == true && !group.optBoolean("dissolved")
+            val options = mutableListOf("查看成员与群 ID")
+            if (active && !owner) options.add("同步群信息")
+            if (active && owner) options.addAll(listOf("修改群名和成员", "生成入群二维码"))
+            if (active) options.add(if (owner) "解散群聊" else "退出群聊")
+            AlertDialog.Builder(this).setTitle(conversationTitle()).setItems(options.toTypedArray()) { _, index ->
+                when (options[index]) {
+                    "查看成员与群 ID" -> AlertDialog.Builder(this).setTitle(groupTitle(id))
+                        .setMessage("群 ID：$id\n\n" + members.keys().asSequence().joinToString("\n\n") {
+                            displayName(it, members.getJSONObject(it).optString("nickname")) + "\n" + it
+                        } + "\n\n成员变更在 Mesh 同步后生效，聊天记录保存在各自设备。")
+                        .setPositiveButton("完成", null).show()
+                    "修改群名和成员" -> editGroup(id)
+                    "同步群信息" -> if(request("group_sync") {it.put("id",id)} != null) notice("群信息同步请求已加入 Mesh 待传队列")
+                    "生成入群二维码" -> request("group_invite") { it.put("id", id) }?.let {
+                        showQR("邀请入群", it.toString(), "10 分钟内有效，仅可使用一次。重新生成会撤销上一个邀请；扫码后需在有效期内与群主通过 Mesh 同步。")
                     }
+                    else -> AlertDialog.Builder(this).setTitle(options[index] + "？")
+                        .setMessage("保留本机聊天记录，变更将通过 Mesh 同步。")
+                        .setPositiveButton("确认") { _, _ -> if (request("group_leave") {it.put("id", id)} != null) {refreshState();show("chat")} }
+                        .setNegativeButton("取消", null).show()
                 }
-                .show()
-        else {
+            }.setNegativeButton("取消", null).show()
+        } else {
             val id = conversation.removePrefix("peer:")
             val pins = (ui.getStringSet("pins", emptySet()) ?: emptySet()).toMutableSet()
-            AlertDialog.Builder(this)
-                .setTitle(conversationTitle())
-                .setItems(arrayOf(if (pins.contains(id)) "取消常用好友" else "设为常用好友", "查看并核对好友公钥")) {
-                    _,
-                    index ->
-                    if (index == 0) {
-                        if (!pins.add(id)) pins.remove(id)
-                        ui.edit().putStringSet("pins", pins).apply()
-                        notice("常用好友排序已更新")
-                    } else
-                        AlertDialog.Builder(this)
-                            .setTitle("当面核对签名公钥")
-                            .setMessage(
-                                data.optJSONObject("contacts")?.optJSONObject(id)?.optString("sign")
-                            )
-                            .setPositiveButton("完成", null)
-                            .show()
-                }
-                .show()
+            AlertDialog.Builder(this).setTitle(conversationTitle())
+                .setItems(arrayOf(if (pins.contains(id)) "取消常用好友" else "设为常用好友", "设置好友备注", "查看已记住的设备")) { _, index ->
+                    when(index) {
+                        0 -> { if (!pins.add(id)) pins.remove(id); ui.edit().putStringSet("pins", pins).apply(); notice("常用好友排序已更新") }
+                        1 -> editRemark(id)
+                        else -> AlertDialog.Builder(this).setTitle("已记住的好友设备")
+                            .setMessage("昵称：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("nickname")}\n\n设备 ID：$id\n\n签名公钥：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("sign")}")
+                            .setPositiveButton("完成", null).show()
+                    }
+                }.show()
         }
+    }
+
+    private fun editRemark(id: String) {
+        val field = input("仅自己可见，留空后显示昵称").apply {setText(data.optJSONObject("contacts")?.optJSONObject(id)?.optString("remark") ?: "")}
+        AlertDialog.Builder(this).setTitle("好友备注").setView(field)
+            .setPositiveButton("保存") {_, _ -> if (request("friend_remark") {it.put("id", id).put("remark", field.text.toString())} != null) {refreshState();show(screen)} }
+            .setNegativeButton("取消", null).show()
+    }
+
+    private fun showQR(title: String, text: String, description: String) {
+        runCatching {
+            val size = 720
+            val bits = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
+            val pixels = IntArray(size * size) {i -> if (bits[i % size, i / size]) Color.BLACK else Color.WHITE}
+            val content = column().apply {
+                addView(ImageView(this@MainActivity).apply {
+                    setImageBitmap(Bitmap.createBitmap(pixels, size, size, Bitmap.Config.ARGB_8888))
+                    setBackgroundColor(Color.WHITE);adjustViewBounds=true;contentDescription=title
+                }, LinearLayout.LayoutParams(-1, dp(300)))
+                addView(label(description, 13f, true))
+            }
+            AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("完成", null)
+                .setNeutralButton("分享文本") { _, _ -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,text)},title)) }.show()
+        }.onFailure {notice("二维码生成失败，请重新生成邀请")}
+    }
+
+    private fun meshSettings() {
+        val settings = data.optJSONObject("settings") ?: return
+        val fields = listOf(Triple("hop_limit", "最大跳数", "1–8"),Triple("message_ttl_secs", "消息有效期（秒）", "60–86400"),
+            Triple("sync_interval_secs", "同步间隔（秒）", "1–60"),Triple("batch_size", "TCP 每批封装数", "1–24"),
+            Triple("max_peers", "TCP 邻居上限", "1–300"),Triple("cache_capacity", "待传封装上限", "64–4096"))
+        val editors = fields.associate { (key, title, range) -> key to input("$title · $range").apply {
+            inputType=android.text.InputType.TYPE_CLASS_NUMBER;setText(settings.optInt(key).toString())
+        } }
+        val form = column().apply {
+            addView(label("跳数和有效期用于新消息。同步间隔影响 TCP 和蓝牙；批量和邻居上限用于 TCP。蓝牙仍每轮发送一个封装，每侧最多 4 条连接。",13f,true))
+            fields.forEach {(key,title,range) -> addView(label("$title（$range）",13f,true));addView(editors.getValue(key))}
+        }
+        val dialog = AlertDialog.Builder(this).setTitle("Mesh 详细参数").setView(ScrollView(this).apply {addView(form)})
+            .setPositiveButton("保存",null).setNeutralButton("默认值",null).setNegativeButton("取消",null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val values = JSONObject()
+                for ((key,_,_) in fields) {
+                    val value = editors.getValue(key).text.toString().toLongOrNull()
+                    if(value==null) {notice("请输入有效整数");return@setOnClickListener}
+                    values.put(key,value)
+                }
+                if(request("settings") {it.put("settings",values)} != null) {refreshState();dialog.dismiss();notice("Mesh 参数已保存")}
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                listOf(8,86400,5,24,300,4096).forEachIndexed {i,value -> editors.getValue(fields[i].first).setText(value.toString())}
+            }
+        }
+        dialog.show()
     }
 
     private fun radio(action: String) {
@@ -1188,7 +1178,7 @@ class MainActivity : AppCompatActivity() {
     private fun scan() {
         IntentIntegrator(this)
             .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-            .setPrompt("当面扫描并核对好友公钥")
+            .setPrompt("扫描好友或群邀请二维码")
             .setBeepEnabled(false)
             .initiateScan()
     }
@@ -1221,10 +1211,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildNearby() {
         card("先认识，再连接", "两端互扫二维码，消息只向已信任的公钥身份开放。") {
-            addView(button("扫描好友二维码", true) { scan() })
+            addView(button("扫描好友或群邀请二维码", true) { scan() })
             addView(
-                button("粘贴公钥文本") {
-                    val text = input("好友公钥 JSON")
+                button("粘贴二维码文本") {
+                    val text = input("好友或群邀请 JSON")
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle("添加好友")
                         .setView(text)
@@ -1284,26 +1274,29 @@ class MainActivity : AppCompatActivity() {
             )
             addView(button("断开 Wi-Fi Direct") { radio("P2P_OFF") })
         }
+        card("Mesh 多跳", "新消息可经多个设备传递。设备 ID 与好友记录保存在本机，修改昵称不会改变身份。") {
+            addView(button("详细传输参数") {meshSettings()})
+            val pending = data.optJSONObject("pending_groups")?.length() ?: 0
+            if (pending>0) addView(label("$pending 个入群申请等待与群主同步，10 分钟内有效。",13f,true))
+        }
+        card("已记住的好友", "点击设置本机备注。重新打开应用后无需重复添加。") {
+            contacts().forEach {(id,name) -> addView(button("$name · ${id.take(12)}…") {editRemark(id)})}
+        }
         card("连接小提示", "校园 Wi-Fi 若隔离设备，请使用自己的热点或蓝牙。蓝牙和 Wi-Fi Direct 仍需真机兼容性验证。") {}
     }
 
     private fun addContact(raw: String) {
-        runCatching { JSONObject(raw) }
-            .onSuccess { contact ->
-                val result = request("contact") { it.put("contact", contact) }
-                if (result != null) {
-                    refreshState()
-                    selectConversation("peer:" + result.getString("id"))
-                }
-            }
-            .onFailure { notice("这不是有效的 Campus Mesh 公钥文本") }
+        val result = request("scan") {it.put("text",raw)} ?: return
+        refreshState()
+        if(result.optString("kind")=="friend") selectConversation("peer:"+result.getString("id"))
+        else notice("入群申请已提交，等待与群主完成 Mesh 同步。邀请 10 分钟内有效。")
     }
 
     private fun buildIdentity() {
         val identity = data.optJSONObject("identity")
         card(identity?.optString("nickname") ?: "正在读取本机身份", "二维码只包含公钥；请与好友当面核对。") {
             if (identity != null) {
-                val json = identity.toString()
+                val json = data.optJSONObject("contact_card")?.toString() ?: identity.toString()
                 val size = 480
                 val bits = MultiFormatWriter().encode(json, BarcodeFormat.QR_CODE, size, size)
                 val pixels =
@@ -1323,7 +1316,7 @@ class MainActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams(-1, dp(260)),
                 )
                 addView(
-                    label(identity.optString("sign"), 12f, true).apply { setTextIsSelectable(true) }
+                    label("本机设备 ID：" + deviceId() + "\n\n签名公钥：" + identity.optString("sign"), 12f, true).apply { setTextIsSelectable(true) }
                 )
                 addView(
                     button("分享公钥") {
@@ -1521,10 +1514,10 @@ class MainActivity : AppCompatActivity() {
                         .show()
                 }
             )
-            addView(button("保存常用群发") { editGroup() })
+            addView(button("创建群聊") { editGroup() })
             addView(label("草稿按会话自动保存。快捷短语只填入输入框，仍由你点击发送。长按气泡可复制；会话菜单可设置常用好友。", 13f, true))
         }
-        card("恢复默认外观", "仅恢复主题、字号、密度与时间显示，保留身份、聊天记录、草稿、短语和群发。") {
+        card("恢复默认外观", "仅恢复主题、字号、密度与时间显示，保留身份、聊天记录、草稿、短语和群聊。") {
             addView(
                 button("恢复默认外观") {
                     ui.edit()
@@ -1572,12 +1565,32 @@ class MainActivity : AppCompatActivity() {
                 .getOrNull() ?: return
         val wasEmpty = data.length() == 0
         data = next
+        if (wasEmpty) migrateLegacyGroups()
         val signature = next.optJSONObject("contacts")?.toString() ?: "{}"
         lastContacts = signature
         updateSummary()
         if (screen == "chat") {
             if (chatOpen) renderMessages() else renderThreads()
         } else if (screen == "identity" && wasEmpty) show("identity")
+    }
+
+    private fun migrateLegacyGroups() {
+        val old=runCatching {JSONObject(ui.getString("groups","{}")!!)}.getOrDefault(JSONObject())
+        for (name in old.keys().asSequence().toList()) {
+            val result=request("group_migrate") {it.put("name",name).put("members",old.getJSONArray(name))} ?: continue
+            val oldKey="group:$name"
+            val newKey="group:"+result.getString("id")
+            val editor=ui.edit()
+            ui.getString("draft:$oldKey",null)?.let {editor.putString("draft:$newKey",it)}
+            val retry=runCatching {JSONObject(ui.getString("retry:$oldKey","{}")!!)}.getOrDefault(JSONObject())
+            if(!ui.contains("draft:$newKey") && retry.has("text")) editor.putString("draft:$newKey",retry.getString("text"))
+            editor.remove("draft:$oldKey").remove("retry:$oldKey")
+            if(conversation==oldKey) {conversation=newKey;editor.putString("conversation",newKey)}
+            old.remove(name)
+            editor.putString("groups",old.toString()).apply()
+        }
+        if(old.length()==0) ui.edit().remove("groups").apply()
+        data=runCatching {Native.request(JSONObject().put("op","state")).getJSONObject("data")}.getOrDefault(data)
     }
 
     override fun onRequestPermissionsResult(

@@ -12,8 +12,8 @@ android {
         applicationId = "org.campusmesh"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "alpha-0.3.0"
+        versionCode = 5
+        versionName = "alpha-0.5.0"
         resValue("string", "app_name", "Campus Mesh alpha")
         ndk { abiFilters += (findProperty("meshAbi")?.toString() ?: "arm64-v8a") }
         externalNativeBuild { cmake { arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON" } }

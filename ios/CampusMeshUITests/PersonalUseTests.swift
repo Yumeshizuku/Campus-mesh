@@ -26,10 +26,14 @@ final class PersonalUseTests: XCTestCase {
         capture("01-聊天")
 
         app.tabBars.buttons["附近"].tap()
-        XCTAssertTrue(app.buttons["粘贴公钥文本"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["粘贴二维码文本"].waitForExistence(timeout: 5))
         capture("02-附近")
         app.tabBars.buttons["身份"].tap()
         XCTAssertTrue(app.images["我的好友公钥二维码"].waitForExistence(timeout: 10))
+        let deviceID=app.staticTexts["deviceID"]
+        XCTAssertTrue(deviceID.waitForExistence(timeout:5))
+        let originalID=deviceID.label
+        XCTAssertEqual(originalID.count,64)
         app.buttons["编辑"].tap()
         let editor = app.alerts["修改本机昵称"]
         let field = editor.textFields.firstMatch
@@ -77,12 +81,55 @@ final class PersonalUseTests: XCTestCase {
         app.tabBars.buttons["身份"].tap()
         XCTAssertTrue(app.staticTexts[nickname].waitForExistence(timeout: 10), "Nickname must survive a full app restart")
         XCTAssertTrue(app.images["我的好友公钥二维码"].exists)
+        XCTAssertEqual(app.staticTexts["deviceID"].label,originalID,"Changing the nickname and restarting must preserve the device ID")
         app.tabBars.buttons["自定义"].tap()
         XCTAssertTrue(compact.waitForExistence(timeout: 5))
         XCTAssertEqual(compact.value as? String, changed, "Appearance changes must survive a full app restart")
         XCTAssertFalse(app.alerts["Campus Mesh"].exists)
     }
 
+
+    func testSocialSettingsAndGroupPersistence() throws {
+        continueAfterFailure=false
+        executionTimeAllowance=300
+        let app=XCUIApplication()
+        app.launchArguments=["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"]
+        app.launch()
+        app.tabBars.buttons["附近"].tap()
+        let parameters=app.buttons["详细传输参数"]
+        reveal(parameters,in:app);parameters.tap()
+        XCTAssertTrue(app.navigationBars["Mesh 详细参数"].waitForExistence(timeout:10))
+        let hops=app.textFields["最大跳数"]
+        XCTAssertTrue(hops.exists)
+        hops.tap()
+        let current=hops.value as? String ?? ""
+        hops.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:current.count)+"4")
+        let save=app.buttons["保存 Mesh 参数"]
+        reveal(save,in:app);save.tap()
+        XCTAssertTrue(app.staticTexts["参数已保存到本机"].waitForExistence(timeout:5))
+        capture("05-Mesh参数")
+        app.tabBars.buttons["聊天"].tap()
+        app.buttons["新建会话"].tap()
+        app.buttons["创建群聊"].tap()
+        let name="测试群 "+UUID().uuidString.prefix(6)
+        let nameField=app.textFields["例如：自习小组"]
+        XCTAssertTrue(nameField.waitForExistence(timeout:5));nameField.tap();nameField.typeText(name)
+        app.buttons["保存"].tap()
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout:10))
+        app.staticTexts[name].tap()
+        app.buttons["会话操作"].tap();app.buttons["群聊信息"].tap()
+        XCTAssertTrue(app.buttons["生成入群二维码"].waitForExistence(timeout:5))
+        app.buttons["生成入群二维码"].tap()
+        XCTAssertTrue(app.images["群邀请二维码"].waitForExistence(timeout:5))
+        capture("06-群邀请")
+        app.terminate();app.launch()
+        app.tabBars.buttons["聊天"].tap()
+        XCTAssertTrue(app.staticTexts[name].waitForExistence(timeout:10),"Managed groups must survive restart")
+        app.tabBars.buttons["附近"].tap()
+        reveal(parameters,in:app);parameters.tap()
+        XCTAssertEqual(app.textFields["最大跳数"].value as? String,"4","Mesh settings must survive restart")
+        XCTAssertFalse(app.alerts["Campus Mesh"].exists)
+    }
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<5 {

@@ -14,8 +14,8 @@ struct NearbyView: View {
                 Section {
                     Label("先认识，再连接",systemImage:"checkmark.shield.fill").font(.headline)
                     Text("两端互扫二维码，并当面核对公钥。无需互联网。").font(.subheadline).foregroundStyle(.secondary)
-                    Button {scanning=true} label:{Label("扫描好友二维码",systemImage:"qrcode.viewfinder")}
-                    Button("粘贴公钥文本") {showImport=true}
+                    Button {scanning=true} label:{Label("扫描好友或群邀请二维码",systemImage:"qrcode.viewfinder")}
+                    Button("粘贴二维码文本") {showImport=true}
                 }
                 Section("蓝牙直连") {
                     LabeledContent("当前状态",value:mesh.bleStatus)
@@ -30,11 +30,13 @@ struct NearbyView: View {
                     Button("连接设备") {if mesh.call(["op":"peer","address":address.trimmingCharacters(in:.whitespacesAndNewlines)]) != nil {UserDefaults.standard.set(address,forKey:"ui.lastAddress");mesh.refresh()}}
                         .disabled(address.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || !mesh.isRunning)
                 }
+                Section("Mesh 多跳") {NavigationLink("详细传输参数") {MeshSettingsView()}}
+                Section("已记住的好友") {ForEach(mesh.contacts.keys.sorted(),id:\.self) {id in NavigationLink(mesh.displayName(id)) {FriendDetailsView(id:id)}}}
                 Section {Text("校园 Wi-Fi 若隔离设备，请使用自己的热点或蓝牙。iOS 返回后台后暂停通信，回到前台后继续同步。").font(.footnote).foregroundStyle(.secondary)}
             }
             .navigationTitle("连接同学")
             .sheet(isPresented:$showImport) {
-                NavigationStack {Form {Section("好友公钥 JSON") {TextEditor(text:$contactJSON).frame(minHeight:180).textInputAutocapitalization(.never).autocorrectionDisabled()}}
+                NavigationStack {Form {Section("好友或群邀请 JSON") {TextEditor(text:$contactJSON).frame(minHeight:180).textInputAutocapitalization(.never).autocorrectionDisabled()}}
                     .navigationTitle("添加好友").toolbar {
                         ToolbarItem(placement:.cancellationAction) {Button("取消"){showImport=false}}
                         ToolbarItem(placement:.confirmationAction) {Button("添加"){mesh.addContact(contactJSON);if mesh.error.isEmpty {showImport=false;contactJSON=""}}.disabled(contactJSON.isEmpty)}
@@ -57,6 +59,8 @@ struct IdentityView: View {
                     if !mesh.identity.isEmpty,let image=qr(mesh.publicJSON) {Image(uiImage:image).interpolation(.none).resizable().scaledToFit().frame(maxWidth:280).padding(16).background(.white,in:RoundedRectangle(cornerRadius:16)).frame(maxWidth:.infinity).accessibilityLabel("我的好友公钥二维码")}
                     Text("让好友扫描，并当面核对公钥。").font(.caption).foregroundStyle(.secondary)
                     ShareLink(item:mesh.publicJSON) {Label("分享公钥",systemImage:"square.and.arrow.up")}.disabled(mesh.identity.isEmpty)
+                    LabeledContent("本机设备 ID") {Text(mesh.deviceID).font(.caption.monospaced()).textSelection(.enabled).accessibilityIdentifier("deviceID")}
+                    Text("设备 ID 和好友保存在本机，修改昵称不会改变 ID。卸载或清除数据后会生成新身份。").font(.caption).foregroundStyle(.secondary)
                     DisclosureGroup("查看签名公钥") {Text(mesh.identity["sign"] as? String ?? "").font(.caption.monospaced()).textSelection(.enabled)}
                 }
                 Section("中继与电量") {
@@ -64,7 +68,7 @@ struct IdentityView: View {
                     Text("中继只传递密文。关闭后仍能发送和接收本人的消息。").font(.caption).foregroundStyle(.secondary)
                     if mesh.isRunning {Button("暂停通信") {mesh.stop(userInitiated:true)}} else {Button("恢复通信") {mesh.start(userInitiated:true)}}
                 }
-                Section {Text("BLE 与混合链路仍需真机验收。iOS 不支持持续后台中继；群发不包含自动成员管理或管理员权限。").font(.footnote).foregroundStyle(.secondary)}
+                Section {Text("iOS 返回后台后暂停中继，回到前台继续同步。群成员变更需要通过 Mesh 送达后才会生效。").font(.footnote).foregroundStyle(.secondary)}
                 Section {LabeledContent("测试版本",value:releaseName)}
             }
             .navigationTitle("我的身份")
@@ -89,10 +93,11 @@ struct IdentityView: View {
 }
 
 struct CustomizationView: View {
+    @EnvironmentObject private var mesh:MeshStore
     @EnvironmentObject private var appearance:AppearanceSettings
     @State private var editingPhrases=false
     @State private var phrases=""
-    @State private var groupEditor:GroupPreset?
+    @State private var groupEditor:MeshGroup?
     var body: some View {
         NavigationStack {
             Form {
@@ -113,13 +118,13 @@ struct CustomizationView: View {
                 }
                 Section("少点几次，更快表达") {
                     Button("编辑快捷短语") {phrases=appearance.phrases.joined(separator:"\n");editingPhrases=true}
-                    Button("保存常用群发") {groupEditor=GroupPreset(name:"",members:[])}
+                    Button("创建群聊") {groupEditor=MeshGroup.empty}
                     Text("草稿按会话保存。快捷短语只填入输入框，由你确认发送；向右轻扫会话可设置常用。").font(.caption).foregroundStyle(.secondary)
-                    ForEach(appearance.groups) {group in Button {groupEditor=group} label:{LabeledContent(group.name,value:"\(group.members.count) 位成员")}}
+                    ForEach(mesh.groups) {group in NavigationLink {GroupDetailsView(id:group.id)} label:{LabeledContent(group.name,value:"\(group.members.count) 位成员")}}
                 }
                 Section {
                     Button("恢复默认外观") {appearance.restoreAppearance()}
-                } footer:{Text("恢复主题、字号、密度、时间显示和通透控件；保留身份、聊天记录、草稿、短语和常用群发。")}
+                } footer:{Text("恢复主题、字号、密度、时间显示和通透控件；保留身份、聊天记录、草稿、短语和群聊。")}
             }
             .navigationTitle("按你的习惯")
             .sheet(item:$groupEditor) {GroupEditor(preset:$0)}

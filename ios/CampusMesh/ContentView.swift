@@ -25,20 +25,21 @@ struct ConversationsView: View {
     @EnvironmentObject private var mesh:MeshStore
     @EnvironmentObject private var appearance:AppearanceSettings
     @State private var query=""
-    @State private var groupEditor:GroupPreset?
+    @State private var groupEditor:MeshGroup?
     @State private var scanning=false
     private func title(_ key:String)->String {
-        if key.hasPrefix("g:"){return String(key.dropFirst(2))}
-        return mesh.contacts[String(key.dropFirst(2))]?["nickname"] as? String ?? "同学"
+        if key.hasPrefix("g:"){return mesh.groupName(String(key.dropFirst(2)))}
+        return mesh.displayName(String(key.dropFirst(2)))
     }
     var body: some View {
-        let snapshot=makeConversationRows(history:mesh.history,contacts:mesh.contacts,groups:appearance.groups,favorites:appearance.favorites,readIDs:appearance.readIDs,query:query)
+        let snapshot=makeConversationRows(history:mesh.history,contacts:mesh.contacts,groups:mesh.groups,favorites:appearance.favorites,readIDs:appearance.readIDs,query:query)
         NavigationStack {
             List {
                 Section {
                     Label(mesh.isRunning ? "本机已就绪 · \(mesh.contacts.count) 位好友" : "通信已暂停",systemImage:mesh.isRunning ? "dot.radiowaves.left.and.right" : "pause.circle")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+                if mesh.pendingGroups>0 {Section {Text("\(mesh.pendingGroups) 个入群申请正在等待与群主同步；邀请 10 分钟内有效。").font(.caption).foregroundStyle(.secondary)}}
                 if snapshot.isEmpty {
                     Section {
                         VStack(alignment:.leading,spacing:12) {
@@ -75,8 +76,8 @@ struct ConversationsView: View {
             .navigationTitle("Campus Mesh").navigationBarTitleDisplayMode(.inline).searchable(text:$query,prompt:"搜索同学或最近消息")
             .toolbar {ToolbarItem(placement:.navigationBarTrailing) {Menu {
                 Button {scanning=true} label:{Label("扫码添加好友",systemImage:"qrcode.viewfinder")}
-                Button {groupEditor=GroupPreset(name:"",members:[])} label:{Label("保存常用群发",systemImage:"person.3")}
-            } label:{Image(systemName:"square.and.pencil")}}}
+                Button {groupEditor=MeshGroup.empty} label:{Label("创建群聊",systemImage:"person.3")}
+            } label:{Image(systemName:"square.and.pencil")}.accessibilityLabel("新建会话")}}
             .sheet(item:$groupEditor) {GroupEditor(preset:$0)}
             .sheet(isPresented:$scanning) {QRScanner {value in mesh.addContact(value);scanning=false}}
         }
@@ -90,13 +91,13 @@ struct ChatRoom: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text=""
     @State private var query=""
-    @State private var groupEditor:GroupPreset?
     @State private var showLatest=false
     @State private var feedback=""
     private var isGroup:Bool {thread.hasPrefix("g:")}
     private var target:String {String(thread.dropFirst(2))}
-    private var title:String {isGroup ? target : mesh.contacts[target]?["nickname"] as? String ?? "同学"}
-    private var preset:GroupPreset? {appearance.groups.first(where:{$0.name==target})}
+    private var title:String {isGroup ? mesh.groupName(target) : mesh.displayName(target)}
+    private var preset:MeshGroup? {mesh.groups.first(where:{$0.id==target})}
+    @State private var showDetails=false
     private var messages:[DisplayMessage] {Array(mesh.history.map(DisplayMessage.init).filter{$0.thread==thread && (query.isEmpty || $0.text.localizedCaseInsensitiveContains(query))}.suffix(200))}
     var body: some View {
         let visible=messages
@@ -136,16 +137,18 @@ struct ChatRoom: View {
         .searchable(text:$query,prompt:"搜索当前会话")
         .toolbar {ToolbarItem(placement:.navigationBarTrailing) {Menu {
             Button {if !appearance.favorites.insert(thread).inserted {appearance.favorites.remove(thread)}} label:{Label(appearance.favorites.contains(thread) ? "取消常用" : "设为常用",systemImage:"pin")}
-            if isGroup {Button("编辑群发成员") {groupEditor=preset ?? GroupPreset(name:target,members:[])}}
-        } label:{Image(systemName:"ellipsis.circle")}}}
-        .sheet(item:$groupEditor) {GroupEditor(preset:$0)}
+            Button(isGroup ? "群聊信息" : "好友信息与备注") {showDetails=true}
+        } label:{Image(systemName:"ellipsis.circle")}.accessibilityLabel("会话操作")}}
+        .sheet(isPresented:$showDetails) {
+            if isGroup {GroupDetailsView(id:target)} else {NavigationStack {FriendDetailsView(id:target)}}
+        }
         .onChange(of:text) {appearance.saveDraft($0,for:thread)}
     }
     private func composer(sendAction:@escaping ()->Void)->some View {
         VStack(alignment:.leading,spacing:8) {
             if isGroup || !feedback.isEmpty {
                 VStack(alignment:.leading,spacing:4) {
-                    if isGroup {Text("本机群发 · \(preset?.members.count ?? 0) 位成员 · 分别加密").font(.caption2)}
+                    if isGroup {Text(preset?.joined == true && preset?.dissolved == false ? "\(preset?.members.count ?? 0) 位成员 · Mesh 加密群聊" : "已退出或解散 · 保留聊天记录").font(.caption2)}
                     if !feedback.isEmpty {Text(feedback).font(.caption).accessibilityAddTraits(.updatesFrequently)}
                 }.foregroundStyle(.secondary).padding(.horizontal,12).padding(.vertical,8)
                     .background(Color(uiColor:.secondarySystemGroupedBackground),in:RoundedRectangle(cornerRadius:16))
@@ -160,7 +163,7 @@ struct ChatRoom: View {
                         .font(.body).padding(.horizontal,14).padding(.vertical,10).frame(minHeight:44)
                         .campusGlass(in:RoundedRectangle(cornerRadius:22),interactive:true)
                         .submitLabel(.send).onSubmit(sendAction).accessibilityLabel("消息")
-                    GlassSendButton(enabled:!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty && mesh.isRunning,action:sendAction)
+                    GlassSendButton(enabled:!text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty && mesh.isRunning && (!isGroup || (preset?.joined == true && preset?.dissolved == false)),action:sendAction)
                 }
             }
         }.padding(.horizontal,12).padding(.vertical,8)
@@ -172,18 +175,9 @@ struct ChatRoom: View {
     private func send() {
         guard !text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else{return}
         guard text.utf8.count<=8192 else{feedback="消息过长，请控制在 8192 字节以内。";return}
-        let recipients=isGroup ? preset?.members ?? [] : [target]
-        guard !recipients.isEmpty else{feedback="请先在会话菜单中选择群发成员。";return}
-        var pending=recipients
-        if let retry=appearance.pending(thread),retry.text==text {pending=retry.remaining.filter{recipients.contains($0)}}
-        guard !pending.isEmpty else{feedback="成员已变化，请重新检查群发设置。";return}
-        for peer in pending {
-            var command:[String:Any]=["op":"send","to":peer,"text":text]
-            if isGroup{command["group"]=target}
-            if mesh.call(command) != nil {pending.removeAll{$0==peer};appearance.savePending(PendingGroupSend(text:text,remaining:pending),for:thread)}
-        }
-        if pending.isEmpty {text="";appearance.saveDraft("",for:thread);appearance.savePending(nil,for:thread);feedback=""}
-        else {feedback="仍有 \(pending.count) 位未完成；草稿已保留，再次发送仅重试未完成成员。"}
+        let command:[String:Any]=isGroup ? ["op":"group_send","id":target,"text":text] : ["op":"send","to":target,"text":text]
+        if mesh.call(command) != nil {text="";appearance.saveDraft("",for:thread);feedback=""}
+        else {feedback="消息尚未提交，草稿已保留。"}
         mesh.refresh()
     }
 }
@@ -204,7 +198,7 @@ struct MessageBubble: View {
         HStack {
             if !message.incoming {Spacer(minLength:40)}
             VStack(alignment:.leading,spacing:5) {
-                if showSender && message.incoming {Text(mesh.contacts[message.peer]?["nickname"] as? String ?? "同学").font(.caption).foregroundStyle(.secondary)}
+                if showSender && message.incoming {Text(mesh.displayName(message.peer,fallback:message.senderName)).font(.caption).foregroundStyle(.secondary)}
                 Text(message.text).font(.system(size:baseSize * appearance.fontSize / 16)).textSelection(.enabled)
                 HStack(spacing:5) {
                     if appearance.timestamps {Text(message.time,style:.time)}
@@ -221,32 +215,31 @@ struct MessageBubble: View {
 }
 
 struct GroupEditor: View {
-    let preset:GroupPreset
+    let preset:MeshGroup
     @EnvironmentObject private var mesh:MeshStore
-    @EnvironmentObject private var appearance:AppearanceSettings
     @Environment(\.dismiss) private var dismiss
     @State private var name=""
     @State private var members=Set<String>()
     @State private var error=""
+    private var available:[String] {Set(mesh.contacts.keys).union(preset.members.keys).subtracting([mesh.deviceID]).sorted()}
     var body: some View {
         NavigationStack {
             Form {
-                Section("本机常用群发") {TextField("例如：自习小组",text:$name);Text("成员组合只保存在本机；不会自动分发群名册。每位成员需提前交换公钥。").font(.caption).foregroundStyle(.secondary)}
-                Section("选择成员") {ForEach(mesh.contacts.keys.sorted(),id:\.self) {id in Toggle(mesh.contacts[id]?["nickname"] as? String ?? "同学",isOn:Binding(get:{members.contains(id)},set:{if $0 {members.insert(id)} else{members.remove(id)}}))}}
+                Section("群聊名称") {TextField("例如：自习小组",text:$name);Text("群主可以管理成员，最多 32 人。也可以先建群，再分享入群二维码。").font(.caption).foregroundStyle(.secondary)}
+                Section("选择成员") {ForEach(available,id:\.self) {id in Toggle(mesh.displayName(id,fallback:preset.members[id]?["nickname"] as? String ?? "同学"),isOn:Binding(get:{members.contains(id)},set:{if $0 {members.insert(id)} else {members.remove(id)}}))}}
                 if !error.isEmpty {Text(error).foregroundStyle(.red)}
-                if !preset.name.isEmpty {Button("移除本机常用群发",role:.destructive) {appearance.groups.removeAll{$0.name==preset.name};dismiss()}}
             }
-            .navigationTitle("常用群发").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(preset.id.isEmpty ? "创建群聊" : "编辑群聊").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement:.cancellationAction) {Button("取消"){dismiss()}}
                 ToolbarItem(placement:.confirmationAction) {Button("保存") {
                     let cleaned=name.trimmingCharacters(in:.whitespacesAndNewlines)
-                    guard !cleaned.isEmpty,cleaned.utf8.count<=128,!members.isEmpty else{error="请输入最多 128 字节的名称，并选择至少一位成员。";return}
-                    guard !appearance.groups.contains(where:{$0.name==cleaned && $0.name != preset.name}) else{error="已有同名群发，请使用其他名称。";return}
-                    appearance.groups.removeAll{$0.name==preset.name};appearance.groups.append(GroupPreset(name:cleaned,members:members.sorted()))
-                    appearance.savePending(nil,for:"g:\(cleaned)");dismiss()
+                    guard !cleaned.isEmpty,cleaned.utf8.count<=96,members.count<32 else{error="请输入最多 96 字节的名称，群成员总数不能超过 32。";return}
+                    var command:[String:Any]=["op":preset.id.isEmpty ? "group_create" : "group_edit","name":cleaned,"members":members.sorted()]
+                    if !preset.id.isEmpty {command["id"]=preset.id}
+                    if mesh.call(command) != nil {mesh.refresh();dismiss()}
                 }}
-            }.onAppear {name=preset.name;members=Set(preset.members)}
+            }.onAppear {name=preset.name;members=Set(preset.members.keys).subtracting([mesh.deviceID])}
         }
     }
 }

@@ -53,7 +53,7 @@ fn missing(e: &mut Engine, ids: &[String]) -> Vec<Frame> {
                 && (e.relay || f.envelope.sender.id() == e.identity.id())
                 && !known.contains(&f.envelope.id)
         })
-        .take(24)
+        .take(e.settings.batch_size)
         .cloned()
         .collect()
 }
@@ -182,10 +182,12 @@ impl Runtime {
                     let _ = u.set_nonblocking(true);
                 }
                 let id = e.lock().unwrap().identity.id();
-                let mut tick = 0u64;
+                let mut last_sync = 0u64;
                 while !stop.load(Ordering::Relaxed) {
+                    let settings = e.lock().unwrap().settings.clone();
+                    let sync_due = now().saturating_sub(last_sync) >= settings.sync_interval_secs;
                     if let Some(u) = &udp {
-                        if tick.is_multiple_of(50) {
+                        if sync_due {
                             let _ = u.send_to(
                                 format!("CM1 {id} {port}").as_bytes(),
                                 "255.255.255.255:37077",
@@ -202,7 +204,9 @@ impl Runtime {
                                             if p != 0 {
                                                 let a = SocketAddr::new(addr.ip(), p);
                                                 let mut ps = ps.lock().unwrap();
-                                                if ps.len() < 300 || ps.contains_key(&a) {
+                                                if ps.len() < settings.max_peers
+                                                    || ps.contains_key(&a)
+                                                {
                                                     ps.entry(a)
                                                         .and_modify(|x| x.last_seen = now())
                                                         .or_insert(Peer {
@@ -220,7 +224,7 @@ impl Runtime {
                             }
                         }
                     }
-                    if tick.is_multiple_of(50) {
+                    if sync_due {
                         let addresses = {
                             let mut ps = ps.lock().unwrap();
                             ps.retain(|_, p| p.manual || now().saturating_sub(p.last_seen) < 60);
@@ -257,7 +261,9 @@ impl Runtime {
                             }
                         }
                     }
-                    tick += 1;
+                    if sync_due {
+                        last_sync = now();
+                    }
                     thread::sleep(Duration::from_millis(100));
                 }
             }));
@@ -271,8 +277,12 @@ impl Runtime {
         })
     }
     pub fn add_peer(&self, address: SocketAddr) -> Result<()> {
+        if address.port() == 0 {
+            return Err("端口不能为 0".into());
+        }
+        let limit = self.engine.lock().map_err(err)?.settings.max_peers;
         let mut ps = self.peers.lock().map_err(err)?;
-        if ps.len() >= 300 && !ps.contains_key(&address) {
+        if ps.len() >= limit && !ps.contains_key(&address) {
             return Err("neighbor limit".into());
         }
         ps.insert(

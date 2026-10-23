@@ -31,7 +31,78 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
     e.prune(network::now());
     let result = match op {
         "state" => {
-            serde_json::json!({"identity":e.identity,"contacts":e.contacts,"history":e.history,"relay":e.relay,"port":h.runtime.port,"peers":h.runtime.peers.lock().map_err(err)?.values().collect::<Vec<_>>() })
+            let contacts: BTreeMap<_, _> = e
+                .contacts
+                .iter()
+                .map(|(id, contact)| {
+                    let remark = e.friends.get(id).map(|m| m.remark.as_str()).unwrap_or("");
+                    let mut value = serde_json::to_value(contact).unwrap();
+                    value["device_id"] = id.clone().into();
+                    value["remark"] = remark.into();
+                    value["display_name"] = if remark.is_empty() {
+                        contact.nickname.clone()
+                    } else {
+                        remark.into()
+                    }
+                    .into();
+                    (id.clone(), value)
+                })
+                .collect();
+            serde_json::json!({"identity":e.identity,"device_id":e.identity.id(),"contact_card":e.contact_card()?,"contacts":contacts,"groups":e.groups,"pending_groups":e.pending_groups,"settings":e.settings,"history":e.history,"relay":e.relay,"port":h.runtime.port,"peers":h.runtime.peers.lock().map_err(err)?.values().collect::<Vec<_>>() })
+        }
+        "contact_card" => serde_json::to_value(e.contact_card()?).map_err(err)?,
+        "scan" => e.scan_card(v["text"].as_str().ok_or("missing text")?, network::now())?,
+        "friend_remark" => {
+            e.set_remark(
+                v["id"].as_str().ok_or("missing id")?,
+                v["remark"].as_str().ok_or("missing remark")?,
+            )?;
+            serde_json::json!({"ok":true})
+        }
+        "settings" => {
+            let settings = serde_json::from_value(v["settings"].clone()).map_err(err)?;
+            e.update_settings(settings)?;
+            let limit = e.settings.max_peers;
+            let mut peers = h.runtime.peers.lock().map_err(err)?;
+            while peers.len() > limit {
+                let key = peers
+                    .iter()
+                    .find(|(_, p)| !p.manual)
+                    .map(|(key, _)| *key)
+                    .ok_or("neighbor limit")?;
+                peers.remove(&key);
+            }
+            serde_json::json!({"ok":true})
+        }
+        "group_create" | "group_migrate" => {
+            let members: Vec<String> = serde_json::from_value(v["members"].clone()).map_err(err)?;
+            let name = v["name"].as_str().ok_or("missing name")?;
+            serde_json::json!({"id":e.create_group(name,&members,if op == "group_migrate" {Some(name)} else {None},network::now())?})
+        }
+        "group_edit" => {
+            let members: Vec<String> = serde_json::from_value(v["members"].clone()).map_err(err)?;
+            e.edit_group(
+                v["id"].as_str().ok_or("missing id")?,
+                v["name"].as_str().ok_or("missing name")?,
+                &members,
+                network::now(),
+            )?;
+            serde_json::json!({"ok":true})
+        }
+        "group_invite" => serde_json::to_value(
+            e.group_invite(v["id"].as_str().ok_or("missing id")?, network::now())?,
+        )
+        .map_err(err)?,
+        "group_sync" => {
+            e.sync_group(v["id"].as_str().ok_or("missing id")?, network::now())?;
+            serde_json::json!({"ok":true})
+        }
+        "group_leave" => {
+            e.leave_group(v["id"].as_str().ok_or("missing id")?, network::now())?;
+            serde_json::json!({"ok":true})
+        }
+        "group_send" => {
+            serde_json::json!({"id":e.send_group(v["id"].as_str().ok_or("missing id")?,v["text"].as_str().ok_or("missing text")?,network::now())?})
         }
         "profile" => {
             let name = v["nickname"].as_str().ok_or("missing nickname")?.trim();
@@ -46,6 +117,9 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
             serde_json::json!({"id":e.add_contact(c)?})
         }
         "send" => {
+            if !v["group"].is_null() {
+                return Err("请使用群聊发送接口".into());
+            }
             serde_json::json!({"id":e.send(v["to"].as_str().ok_or("missing to")?,v["text"].as_str().ok_or("missing text")?,v["group"].as_str().map(str::to_owned),network::now())?})
         }
         "relay" => {
@@ -55,15 +129,15 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
         "ingest" => {
             serde_json::json!({"accepted":e.receive(serde_json::from_value(v["frame"].clone()).map_err(err)?,network::now())?})
         }
-        "outgoing" => serde_json::to_value(e.outgoing_batch(
-            network::now(),
-            &mut h.cursor,
-            v["limit"].as_u64().unwrap_or(24).clamp(1, 24) as usize,
-        ))
-        .map_err(err)?,
+        "outgoing" => {
+            let limit = (v["limit"].as_u64().unwrap_or(24).clamp(1, 24) as usize)
+                .min(e.settings.batch_size);
+            serde_json::to_value(e.outgoing_batch(network::now(), &mut h.cursor, limit))
+                .map_err(err)?
+        }
         _ => return Err("unknown operation".into()),
     };
-    if op != "state" && op != "outgoing" {
+    if !["state", "outgoing", "contact_card"].contains(&op) {
         e.save(&h.path)?;
     }
     Ok(result)
