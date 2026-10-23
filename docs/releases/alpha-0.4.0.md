@@ -1,21 +1,27 @@
-这次 iOS 更新在 Telegram 风格的聊天界面中加入了 Apple 的 Liquid Glass。输入栏、快捷短语、发送和“最新消息”按钮在 iOS 26 及以上系统会显示原生玻璃效果，发送按钮也会跟随你选择的主题色。应用仍支持 iOS 16，较早的系统会使用兼容材质。
+这次 iOS 更新在 Telegram 风格的聊天界面中加入了 Apple Liquid Glass。聊天输入栏、快捷短语、发送和“最新消息”按钮，在 iOS 26 及更新系统上会呈现原生玻璃效果，发送按钮的颜色也会跟随你选择的主题。应用最低支持 iOS 16，较早的系统使用兼容的半透明材质。
 
-你可以在“自定义”页面预览效果，也可以关闭通透控件。开启系统的降低透明度或增强对比度后，这些控件会使用实色背景；开启减少动态效果后，会关闭自定义玻璃交互效果和应用主动触发的平滑滚动。已有的会话草稿、快捷短语、主题和字号设置仍然可以使用。
+## 外观可以按习惯调整
 
-这次也补齐了 IPA 的自动构建、打包校验和发布工具。Xcode 26.2 与 iPhoneOS SDK 26.2 已成功生成 iPhone ARM64 设备版，版本为 **alpha-0.4.0**，内部版本为 0.4.0 / build 5。发布后的 IPA 已重新下载，目录结构、设备平台标记和文件校验和均已检查通过。
+你可以在“自定义”页面预览或关闭通透控件。开启系统的降低透明度或增强对比度后，这些控件会使用实色背景；开启减少动态效果后，会关闭自定义玻璃交互和平滑滚动。原有的主题、字号、会话草稿和快捷短语仍然可以使用。
 
-**个人使用可以在 Windows 或 Mac 上通过 [Sideloadly](https://sideloadly.io/)，用自己的免费 Apple 账户签名安装，无需上架。** 下载的 IPA 尚未签名，不能直接在手机上点击安装；免费账户通常需要每 7 天续签。操作步骤见 [iPhone 个人安装说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)。应用尚未完成 iPhone 真机运行测试。
+## 安装到自己的 iPhone
 
-2026-10-23，应用已通过 iOS 26.2 模拟器的实际操作检查：启动、四个页面切换、公钥二维码、昵称修改、通信暂停与恢复，以及昵称和自定义设置的重启保存均已验证。[完整检查流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)和 [IPA 构建与下载校验](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)也全部通过。[报告与实际截图](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md#启动与操作检查)已保存到仓库。
+当前版本为 **alpha-0.4.0**，内部版本为 0.4.0 / build 5，安装包使用 iPhone ARM64 真机架构。
 
-下载文件：
+**下载的 IPA 尚未签名，安装前需要完成个人签名。** 有 Windows 或 Mac 时，可以通过 [Sideloadly](https://sideloadly.io/)，用自己的免费 Apple 账户签名安装，无需上架或购买开发者会员。免费签名通常需要每 7 天续签，覆盖更新时应使用同一账户和应用标识，以保留本机身份与聊天记录。具体步骤见[个人安装说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)。
+
+## 已完成的检查
+
+Xcode 26.2 已成功生成设备版 IPA。发布后重新下载的文件通过了包结构、真机架构、执行权限和校验和检查。
+
+2026-10-23，应用也在 iOS 26.2 模拟器上通过了实际操作检查：启动通信核心、切换四个主页面、显示公钥二维码、修改昵称，以及暂停和恢复通信。重新打开应用后，昵称和自定义设置能够正常保留。手机签名安装和真实无线通信仍待真机确认。
+
+[完整验证流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)与 [IPA 构建、上传及下载校验](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)均已通过。[测试结果和实际截图](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md#启动与操作检查)已保存到仓库。
+
+## 下载文件
 
 - [iPhone 未签名 IPA](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa) · [SHA-256 校验文件](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.sha256) · [版本与平台信息](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.json)
 - [原始应用源码包](https://github.com/Yumeshizuku/Campus-mesh/raw/855e6a86eae23335fa701e091d8c30270f16219e/artifacts/Campus-Mesh-iOS-alpha-0.4.0-source.zip) · [SHA-256 校验文件](https://github.com/Yumeshizuku/Campus-mesh/raw/855e6a86eae23335fa701e091d8c30270f16219e/artifacts/Campus-Mesh-iOS-alpha-0.4.0-source.zip.sha256)
-- [包含 IPA 工具的构建源码](https://github.com/Yumeshizuku/Campus-mesh/tree/48d71dbbd57454c4a0737f5d13413d675fe101c3) · [构建与下载说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)
+- [最初 IPA 对应的构建源码](https://github.com/Yumeshizuku/Campus-mesh/tree/48d71dbbd57454c4a0737f5d13413d675fe101c3) · [当前构建与安装说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)
 
-IPA 大小为 651779 字节，SHA-256 为 `bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45`。
-
-构建和发布过程可以在[这次运行记录](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278)中查看，对应源码提交为 `48d71dbbd57454c4a0737f5d13413d675fe101c3`。[此前的检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555)也已通过核心测试和 iOS 模拟器编译。
-
-构建工具随后更新到了支持 Node.js 24 的 Actions，并固定使用 macOS 15 Intel 与 Ubuntu 24.04。[新版 IPA 流程测试](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)已通过设备版编译、上传、重新下载和校验，两个任务的 GitHub 注释均为空。这次测试没有开启发布，上方下载文件和校验和仍对应原先的发布版本。
+IPA 大小为 651779 字节，SHA-256 为 `bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45`。原始构建和发布记录见[这次运行](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278)。后续检查没有覆盖这个下载文件；测试所用的界面与通信核心源码和发布包对应源码一致。

@@ -25,11 +25,11 @@ iPhone 进入后台后会暂停通信，回到前台再继续。个人签名解�
 
 ## 已有的构建工具
 
-现在可以直接通过 GitHub 上的 `Build iOS IPA` 工作流生成 iPhone 安装包。它会在 macOS 环境中准备 Xcode 26.2、Rust 1.99.1 和 XcodeGen，再将 Rust 通信核心与 SwiftUI 界面一起编译成 iPhone ARM64 应用。使用这条云端流程时，你的电脑上无需安装 Xcode。
+GitHub 上的 `Build iOS IPA` 工作流会自动准备 Xcode 26.2、Rust 1.99.1 和 XcodeGen，将通信核心与界面编译成 iPhone ARM64 真机应用。使用云端构建时，你的电脑上无需安装 Xcode。
 
 构建环境固定为 `macos-15-intel`，产物下载校验和发布任务使用 `ubuntu-24.04`。这些固定标签可以避免默认系统版本迁移带来的变化；使用 Intel 构建机时，生成的 iPhone 应用仍然是 ARM64 版本。工作流所用的 JavaScript Actions 已更新为支持 Node.js 24 的版本。
 
-新版流程已在[运行 39783000531](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)中完成实际验证：Mac 上构建和上传成功，Ubuntu 上重新下载、检查 IPA 结构及校验和也全部通过，两个任务的 GitHub 注释均为空。这次运行用于检查构建与产物传输，没有启用发布，因此下方 Release 下载文件及其校验和仍对应原先的发布记录。
+这条流程已在[最新 IPA 检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)中通过：Mac 完成构建和上传，Ubuntu 重新下载文件，并检查包结构与校验和。这次没有开启发布，下面的 Release 下载文件和校验和仍对应原始发布记录。较早的流程升级结果也保存在[历史检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)中。
 
 ## 已生成的 alpha-0.4.0
 
@@ -41,7 +41,7 @@ iPhone 进入后台后会暂停通信，回到前台再继续。个人签名解�
 - 大小：`651779` 字节；应用标识：`org.campusmesh.app`。
 - SHA-256：`bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45`。
 
-发布后，已重新下载 IPA，确认包内的 Payload 目录、ARM64 / IOS Mach-O 平台标记、执行权限和校验和都符合要求。打包器的 7 项测试也已通过，能拒绝模拟器程序、带签名的输入、符号链接和缺少执行权限的程序。
+发布后的 IPA 已重新下载，确认应用目录、真机架构、执行权限和校验和完整。打包工具的 7 项测试也已通过，可以识别并拒绝模拟器程序、带有签名材料的输入、符号链接，以及缺少执行权限的程序。详细平台信息保存在随包提供的 JSON 文件中。
 
 **这个 IPA 尚未签名，需要完成签名后才能安装到普通 iPhone；目前还没有手机安装和运行的测试结果。**
 
@@ -81,8 +81,8 @@ python3 scripts/package-ios-ipa.py verify artifacts/CampusMesh-alpha-0.4.0-unsig
 
 macOS 上运行 `./scripts/test-ios.sh`，会编译应用并在已安装的 iOS 26 或更新版本的 iPhone 模拟器中真正启动它。检查覆盖通信核心初始化、公钥二维码、四个主页面、昵称修改及重启保存、暂停与恢复通信、自定义偏好的重启保存。测试调用实际应用和 Rust 核心，没有用模拟数据替代身份。
 
-`Verify` 工作流执行相同步骤，并保留 `ios-personal-use-tests` 附件中的 XCTest 结果、页面截图和日志。模拟器检查不能代替个人签名、iPhone 安装或无线链路的真机测试。
+`Verify` 工作流会执行相同检查，并保存结果、页面截图和日志。可以下载 `ios-personal-use-report` 查看简明报告，也可以下载 `ios-personal-use-tests` 查看完整测试文件。个人签名、手机安装和无线链路仍需要在真实设备上确认。
 
 2026-10-23，这套检查已在[运行 39877716098](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)中通过。实际使用的是 iOS 26.2、ARM64 的 iPhone SE 模拟器，完整操作用例 1 项通过、0 项失败。核心、Android 和 Intel iOS 编译任务也全部通过；[同一提交的 IPA 流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)完成了设备编译、上传、下载及校验。
 
-运行测试使用 `macos-15` 的 Apple Silicon 环境，测试程序会在启动模拟器前完成编译。界面和通信核心的源码与上方已发布 IPA 一致，发布文件及其校验和保持原记录。详细结果见[结构化报告](reports/ios-personal-use.json)和[XCTest 日志](reports/ios-personal-use-tests.txt)，实际截图包括[聊天](reports/ios-personal-use/01-chat.png)、[附近](reports/ios-personal-use/02-nearby.png)、[身份](reports/ios-personal-use/03-identity.png)和[自定义](reports/ios-personal-use/04-customization.png)。Actions 中另有体积较小的 `ios-personal-use-report` 附件，方便单独下载报告和截图。
+操作测试使用 `macos-15` 的 Apple Silicon 环境，先完成测试程序编译，再启动模拟器。所用的界面和通信核心源码与上方已发布 IPA 一致。详细结果见[结构化报告](reports/ios-personal-use.json)和[XCTest 日志](reports/ios-personal-use-tests.txt)，实际截图包括[聊天](reports/ios-personal-use/01-chat.png)、[附近](reports/ios-personal-use/02-nearby.png)、[身份](reports/ios-personal-use/03-identity.png)和[自定义](reports/ios-personal-use/04-customization.png)。
