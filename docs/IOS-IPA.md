@@ -4,7 +4,7 @@
 
 ## 安装到自己的 iPhone
 
-1. 在电脑上[下载 CampusMesh-alpha-0.4.0-unsigned.ipa](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa)，并从 [Sideloadly 官网](https://sideloadly.io/)安装对应 Windows 或 macOS 的版本。Windows 按官网下载提示安装 Apple 网页版 iTunes 和 iCloud；如果已有对应的 Microsoft Store 版本，按官方说明更换。
+1. 在电脑上[下载 alpha-0.5.0 安装包](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392/artifacts/12482503417)，解压取得 `CampusMesh-alpha-0.5.0-unsigned.ipa`，并从 [Sideloadly 官网](https://sideloadly.io/)安装对应 Windows 或 macOS 的版本。Windows 按官网下载提示安装 Apple 网页版 iTunes 和 iCloud；如果已有对应的 Microsoft Store 版本，按官方说明更换。
 2. 用数据线连接 iPhone，解锁手机并选择信任这台电脑。在 Sideloadly 中选中手机，将下载的 IPA 拖入窗口，填写你自己的 Apple 账户，然后点击 Start。登录和双重认证只在你本机的安装工具中完成，不要把密码、验证码或签名私钥发到聊天或 GitHub。
 3. 安装后按系统提示，在“设置 → 通用 → VPN 与设备管理”中信任对应的开发者。在 iOS 16 及以上版本，还需按系统提示开启“设置 → 隐私与安全性 → 开发者模式”，重启并确认。
 4. 打开桌面上的 **Campus Mesh alpha**。聊天页出现“本机已就绪”，身份页显示你的昵称和公钥二维码，说明通信核心已启动。可以先调整外观、修改昵称，再开始添加好友。
@@ -17,7 +17,7 @@
 
 ### 装好后怎样聊天
 
-两台手机都打开应用，在“身份”页展示公钥二维码，用“附近 → 扫描好友二维码”互相添加，并当面核对公钥。保持应用在前台，可以在“附近”启用蓝牙，也可以连到允许设备互通的同一 Wi-Fi 或个人热点，填写对方的 `IPv4:37078` 地址。聊天页选择好友后发送一条短消息，检查接收方的内容和发送方的送达状态。
+两台手机都打开应用，在“身份”页展示公钥二维码，用“附近 → 扫描好友或群邀请二维码”互相添加，并当面核对公钥。保持应用在前台，可以在“附近”启用蓝牙，也可以连到允许设备互通的同一 Wi-Fi 或个人热点，填写对方的 `IPv4:37078` 地址。聊天页选择好友后发送一条短消息，检查接收方的内容和发送方的送达状态。
 
 iPhone 进入后台后会暂停通信，回到前台再继续。个人签名解决的是安装许可；蓝牙、手机局域网和跨平台无线通信仍需按[真机验收步骤](DEVICE-TESTS.md)在实际设备上确认。
 
@@ -29,7 +29,13 @@ GitHub 上的 `Build iOS IPA` 工作流会自动准备 Xcode 26.2、Rust 1.99.1 
 
 构建环境固定为 `macos-15-intel`，产物下载校验和发布任务使用 `ubuntu-24.04`。这些固定标签可以避免默认系统版本迁移带来的变化；使用 Intel 构建机时，生成的 iPhone 应用仍然是 ARM64 版本。工作流所用的 JavaScript Actions 已更新为支持 Node.js 24 的版本。
 
-这条流程已在[最新 IPA 检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)中通过：Mac 完成构建和上传，Ubuntu 重新下载文件，并检查包结构与校验和。这次没有开启发布，下面的 Release 下载文件和校验和仍对应原始发布记录。较早的流程升级结果也保存在[历史检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)中。
+这条流程已在[alpha-0.5.0 IPA 检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392)中通过：Mac 完成构建和上传，Ubuntu 重新下载文件，并检查包结构与校验和。这次没有开启发布，下面的 Release 下载文件和校验和仍对应原始发布记录。较早的流程升级结果也保存在[历史检查](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39783000531)中。
+
+## alpha-0.5.0 安装包
+
+[下载本轮 IPA 与校验文件](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392/artifacts/12482503417)。应用版本为 alpha-0.5.0 / build 6，最低 iOS 16，架构为 iPhone ARM64。包大小为 840608 字节，SHA-256 为 `139f1d6d7dea46ffa5e39cad8eb47b583c06f3f54dae5293d13dd9a4821b8326`。源码提交为 `49bbdcaa951736ea79ab5cff510368fbe7a46a71`，包结构和下载摘要已复核。
+
+设备 ID、好友备注、群聊与 Mesh 参数的保存已通过 iOS 26.2 模拟器操作检查，结果见[验证报告](VERIFICATION.md)。下载包仍未签名，按上面的个人安装步骤处理。Actions 文件保留 30 天，需要登录 GitHub 下载；下方历史 Release 链接继续保留。
 
 ## 已生成的 alpha-0.4.0
 
@@ -51,11 +57,11 @@ GitHub 上的 `Build iOS IPA` 工作流会自动准备 Xcode 26.2、Rust 1.99.1 
 
 每次运行都会先在 Mac 上生成并上传 IPA，再由独立的 Ubuntu 任务重新下载，检查 IPA 结构和 SHA-256 校验和。只有构建与下载校验都通过，手动选择的发布任务才会继续。
 
-成功后，从运行页面的 Artifacts 下载 `CampusMesh-iOS-alpha-0.4.0-unsigned`，解压得到：
+成功后，从运行页面的 Artifacts 下载 `CampusMesh-iOS-alpha-0.5.0-unsigned`，解压得到：
 
-- `CampusMesh-alpha-0.4.0-unsigned.ipa`
-- `CampusMesh-alpha-0.4.0-unsigned.ipa.sha256`
-- `CampusMesh-alpha-0.4.0-unsigned.ipa.json`
+- `CampusMesh-alpha-0.5.0-unsigned.ipa`
+- `CampusMesh-alpha-0.5.0-unsigned.ipa.sha256`
+- `CampusMesh-alpha-0.5.0-unsigned.ipa.json`
 
 Actions 中的下载文件会保留 30 天，GitHub Release 上的附件则不受这个期限影响。只有手动勾选发布时，工作流才会使用仓库写权限上传附件。
 
@@ -72,14 +78,14 @@ macOS 上安装 Xcode 26+、XcodeGen、Rust 和 Python 3 后运行：
 打包器只使用 Python 标准库，可以在 macOS 或 Linux 独立检查已生成的文件：
 
 ```bash
-python3 scripts/package-ios-ipa.py verify artifacts/CampusMesh-alpha-0.4.0-unsigned.ipa
+python3 scripts/package-ios-ipa.py verify artifacts/CampusMesh-alpha-0.5.0-unsigned.ipa
 ```
 
 检查会确认 `Payload/*.app` 目录和 Info.plist 是否完整、内部版本号是否为数字、发布名称是否使用 alpha 格式，以及程序是否保留执行权限。它还会读取 Mach-O 中的 ARM64 和 IOS 平台标记，避免把模拟器程序当作设备版。带有签名材料的输入会被拒绝。随包提供的 JSON 文件记录了 SHA-256、文件大小、平台、版本和签名状态，方便核对。
 
 ## 启动与操作检查
 
-macOS 上运行 `./scripts/test-ios.sh`，会编译应用并在已安装的 iOS 26 或更新版本的 iPhone 模拟器中真正启动它。检查覆盖通信核心初始化、公钥二维码、四个主页面、昵称修改及重启保存、暂停与恢复通信、自定义偏好的重启保存。测试调用实际应用和 Rust 核心，没有用模拟数据替代身份。
+macOS 上运行 `./scripts/test-ios.sh`，会编译应用并在已安装的 iOS 26 或更新版本的 iPhone 模拟器中真正启动它。检查覆盖通信核心初始化、公钥二维码、四个主页面、昵称和设备 ID 的重启保存、暂停与恢复通信、自定义偏好、好友备注、群聊邀请及 Mesh 参数保存。测试调用实际应用和 Rust 核心，没有用模拟数据替代身份。
 
 `Verify` 工作流会执行相同检查，并保存结果、页面截图和日志。可以下载 `ios-personal-use-report` 查看简明报告，也可以下载 `ios-personal-use-tests` 查看完整测试文件。个人签名、手机安装和无线链路仍需要在真实设备上确认。
 

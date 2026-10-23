@@ -1,13 +1,20 @@
 import SwiftUI
 
-struct GroupPreset: Codable, Identifiable {
-    var name: String
-    var members: [String]
-    var id: String { name }
-}
-struct PendingGroupSend: Codable {
-    var text: String
-    var remaining: [String]
+struct LegacyGroupPreset: Codable { var name:String; var members:[String] }
+struct MeshGroup: Identifiable {
+    var id:String; var name:String; var ownerID:String; var members:[String:[String:Any]]
+    var joined:Bool; var dissolved:Bool
+    static var empty:MeshGroup {MeshGroup(id:"",name:"",ownerID:"",members:[:],joined:true,dissolved:false)}
+    init(id:String,name:String,ownerID:String,members:[String:[String:Any]],joined:Bool,dissolved:Bool) {
+        self.id=id;self.name=name;self.ownerID=ownerID;self.members=members;self.joined=joined;self.dissolved=dissolved
+    }
+    init(_ raw:[String:Any]) {
+        id=raw["id"] as? String ?? "";name=raw["name"] as? String ?? "群聊"
+        let owner=raw["owner"] as? [String:Any] ?? [:]
+        let all=raw["members"] as? [String:[String:Any]] ?? [:]
+        ownerID=all.first(where:{($0.value["sign"] as? String)==(owner["sign"] as? String)})?.key ?? ""
+        members=all;joined=raw["joined"] as? Bool ?? false;dissolved=raw["dissolved"] as? Bool ?? false
+    }
 }
 
 /// Local UI preferences never change identity, trust or transport permissions.
@@ -37,12 +44,6 @@ final class AppearanceSettings: ObservableObject {
     @Published var favorites = Set(UserDefaults.standard.stringArray(forKey:"ui.favorites") ?? []) {
         didSet { defaults.set(Array(favorites),forKey:"ui.favorites") }
     }
-    @Published var groups: [GroupPreset] = {
-        guard let data=UserDefaults.standard.data(forKey:"ui.groups") else {return []}
-        return (try? JSONDecoder().decode([GroupPreset].self,from:data)) ?? []
-    }() {
-        didSet { if let data=try? JSONEncoder().encode(groups) { defaults.set(data,forKey:"ui.groups") } }
-    }
     @Published var readIDs = Set(UserDefaults.standard.stringArray(forKey:"ui.readIDs") ?? []) {
         didSet { defaults.set(Array(readIDs),forKey:"ui.readIDs") }
     }
@@ -57,14 +58,7 @@ final class AppearanceSettings: ObservableObject {
     }
     func draft(_ key:String)->String { defaults.string(forKey:"ui.draft.\(key)") ?? "" }
     func saveDraft(_ text:String,for key:String) { defaults.set(text,forKey:"ui.draft.\(key)") }
-    func pending(_ key:String)->PendingGroupSend? {
-        guard let data=defaults.data(forKey:"ui.pending.\(key)") else {return nil}
-        return try? JSONDecoder().decode(PendingGroupSend.self,from:data)
-    }
-    func savePending(_ value:PendingGroupSend?,for key:String) {
-        if let value=value,let data=try? JSONEncoder().encode(value) { defaults.set(data,forKey:"ui.pending.\(key)") }
-        else { defaults.removeObject(forKey:"ui.pending.\(key)") }
-    }
+    func reloadFavorites() {favorites=Set(defaults.stringArray(forKey:"ui.favorites") ?? [])}
     func restoreAppearance() { theme="system";accentName="blue";fontSize=16;compact=false;timestamps=true;glassControls=true }
 }
 
@@ -75,16 +69,20 @@ struct DisplayMessage: Identifiable {
     let group:String?
     let incoming:Bool
     let status:String
+    let senderName:String
+    let delivery:[String:String]
     let time:Date
     init(_ raw:[String:Any]) {
         id=raw["id"] as? String ?? "";peer=raw["peer"] as? String ?? ""
         text=raw["text"] as? String ?? "";group=raw["group"] as? String
         incoming=raw["incoming"] as? Bool ?? false
         status=raw["status"] as? String ?? "queued"
+        senderName=raw["sender_name"] as? String ?? "同学"
+        delivery=raw["delivery"] as? [String:String] ?? [:]
         time=Date(timeIntervalSince1970:(raw["time"] as? NSNumber)?.doubleValue ?? 0)
     }
     var statusLabel:String {
-        switch status {case "delivered":return "已送达";case "received":return "已收到";case "expired":return "已过期";default:return "等待送达"}
+        switch status {case "delivered":return "已送达";case "partially_delivered":return "已送达 \(delivery.values.filter{$0=="delivered"}.count)/\(delivery.count)";case "received":return "已收到";case "expired":return "已过期";default:return "等待送达"}
     }
     var thread:String { if let group=group {return "g:\(group)"};return "p:\(peer)" }
 }
@@ -96,15 +94,15 @@ struct ConversationRow:Identifiable {
 }
 
 /// Build once per UI snapshot, rather than rescanning history for every row.
-func makeConversationRows(history:[[String:Any]],contacts:[String:[String:Any]],groups:[GroupPreset],favorites:Set<String>,readIDs:Set<String>,query:String)->[ConversationRow] {
+func makeConversationRows(history:[[String:Any]],contacts:[String:[String:Any]],groups:[MeshGroup],favorites:Set<String>,readIDs:Set<String>,query:String)->[ConversationRow] {
     let messages=history.map(DisplayMessage.init)
     var latest=[String:DisplayMessage](),unread=[String:Int]()
     for message in messages {
         latest[message.thread]=message
         if message.incoming && !readIDs.contains(message.id){unread[message.thread,default:0]+=1}
     }
-    func title(_ key:String)->String {key.hasPrefix("g:") ? String(key.dropFirst(2)) : contacts[String(key.dropFirst(2))]?["nickname"] as? String ?? "同学"}
-    let keys=Set(contacts.keys.map{"p:\($0)"}+groups.map{"g:\($0.name)"}+Array(latest.keys))
+    func title(_ key:String)->String {key.hasPrefix("g:") ? (groups.first{$0.id==String(key.dropFirst(2))}?.name ?? "旧群聊记录") : contacts[String(key.dropFirst(2))]?["display_name"] as? String ?? "同学"}
+    let keys=Set(contacts.keys.map{"p:\($0)"}+groups.map{"g:\($0.id)"}+Array(latest.keys))
     return keys.filter{query.isEmpty || title($0).localizedCaseInsensitiveContains(query) || latest[$0]?.text.localizedCaseInsensitiveContains(query)==true}.sorted{a,b in
         let af=favorites.contains(a),bf=favorites.contains(b)
         if af != bf {return af}

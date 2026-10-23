@@ -6,8 +6,8 @@ import UserNotifications
     @StateObject private var appearance = AppearanceSettings()
     @Environment(\.scenePhase) private var phase
     var body: some Scene {
-        WindowGroup { ContentView().environmentObject(mesh).environmentObject(appearance).tint(appearance.accent).preferredColorScheme(appearance.colorScheme).onAppear { mesh.start() }.onChange(of: phase) { value in
-            if value == .active { mesh.start() } else if value == .background { mesh.stop() }
+        WindowGroup { ContentView().environmentObject(mesh).environmentObject(appearance).tint(appearance.accent).preferredColorScheme(appearance.colorScheme).onAppear { mesh.start();appearance.reloadFavorites() }.onChange(of: phase) { value in
+            if value == .active { mesh.start();appearance.reloadFavorites() } else if value == .background { mesh.stop() }
         } }
     }
 }
@@ -44,6 +44,7 @@ import UserNotifications
         handle = path.withCString { path in nickname.withCString { cm_open(path,$0,37078,discovery) } }
         guard handle != nil else { error = "核心启动失败：检查状态文件与 TCP 端口"; return }
         isRunning = true
+        migrateLegacyGroups()
         refresh()
         if bleEnabled { startBLE() }
         timer = Timer.scheduledTimer(withTimeInterval:2,repeats:true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
@@ -55,6 +56,7 @@ import UserNotifications
         guard ble == nil, handle != nil else { return }
         let adapter = BLEMesh()
         adapter.call = { [weak self] in self?.call($0) }
+        adapter.syncInterval = { [weak self] in (self?.settings["sync_interval_secs"] as? NSNumber)?.doubleValue ?? 5 }
         adapter.onStatus = { [weak self] in self?.bleStatus = $0 }
         ble = adapter; adapter.start()
     }
@@ -83,9 +85,37 @@ import UserNotifications
         }
         baseline = true
     }
-    func addContact(_ text:String) {
-        do { let contact = try JSONSerialization.jsonObject(with:Data(text.utf8)); call(["op":"contact","contact":contact]); refresh() }
-        catch { self.error = "无效的公钥二维码或 JSON" }
+    var deviceID:String {state["device_id"] as? String ?? ""}
+    var groups:[MeshGroup] {(state["groups"] as? [String:[String:Any]] ?? [:]).values.map(MeshGroup.init).sorted{$0.name<$1.name}}
+    var settings:[String:Any] {state["settings"] as? [String:Any] ?? [:]}
+    var pendingGroups:Int {(state["pending_groups"] as? [String:Any] ?? [:]).count}
+    func displayName(_ id:String,fallback:String="同学")->String {
+        if id==deviceID {return identity["nickname"] as? String ?? fallback}
+        if let name=contacts[id]?["display_name"] as? String {return name}
+        return history.last(where:{$0["peer"] as? String==id && $0["incoming"] as? Bool==true})?["sender_name"] as? String ?? fallback
     }
-    var publicJSON: String { guard let data = try? JSONSerialization.data(withJSONObject:identity,options:[.sortedKeys]) else { return "" }; return String(decoding:data,as:UTF8.self) }
+    func groupName(_ id:String)->String {groups.first{$0.id==id}?.name ?? "旧群聊记录"}
+    func addContact(_ text:String) {if call(["op":"scan","text":text]) != nil {refresh()}}
+    private func migrateLegacyGroups() {
+        let defaults=UserDefaults.standard
+        guard let data=defaults.data(forKey:"ui.groups"),let presets=try? JSONDecoder().decode([LegacyGroupPreset].self,from:data) else{return}
+        var remaining=[LegacyGroupPreset]()
+        for preset in presets {
+            guard let result=call(["op":"group_migrate","name":preset.name,"members":preset.members]) as? [String:Any],let id=result["id"] as? String else{remaining.append(preset);continue}
+            let old="g:\(preset.name)",new="g:\(id)"
+            // An unfinished old fanout stays a draft; it is never sent automatically.
+            if let draft=defaults.string(forKey:"ui.draft.\(old)") {defaults.set(draft,forKey:"ui.draft.\(new)")}
+            if let pending=defaults.data(forKey:"ui.pending.\(old)"),let raw=try? JSONSerialization.jsonObject(with:pending) as? [String:Any],let text=raw["text"] as? String,defaults.string(forKey:"ui.draft.\(new)")==nil {defaults.set(text,forKey:"ui.draft.\(new)")}
+            defaults.removeObject(forKey:"ui.pending.\(old)");defaults.removeObject(forKey:"ui.draft.\(old)")
+            let favorites=defaults.stringArray(forKey:"ui.favorites") ?? []
+            defaults.set(favorites.map{$0==old ? new : $0},forKey:"ui.favorites")
+        }
+        if remaining.isEmpty {defaults.removeObject(forKey:"ui.groups")}
+        else if let data=try? JSONEncoder().encode(remaining) {defaults.set(data,forKey:"ui.groups")}
+    }
+    var publicJSON:String {jsonText(state["contact_card"] ?? [:])}
+}
+func jsonText(_ value:Any)->String {
+    guard let data=try? JSONSerialization.data(withJSONObject:value,options:[.sortedKeys]) else{return ""}
+    return String(decoding:data,as:UTF8.self)
 }

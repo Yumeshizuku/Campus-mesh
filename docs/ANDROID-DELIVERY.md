@@ -38,6 +38,8 @@ workflow_dispatch 只验证并保存 APK，不发布；发布必须由匹配的 
 
 ## 现有记录与验证边界
 
+alpha-0.5.0 已在[本轮 Verify](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911054046)完成完整构建、二维码单元测试、Lint、签名和对齐检查，并保存 APK。下载文件也已在本地核对摘要、版本和来源；实际打包的 PR 临时合并提交为 `71441d5efd36b93de5a2a2e5abc2e594ef70aab7`。原生 UI 和 IPA 的同期检查见[本轮验证记录](reports/alpha-0.5.0/validation.json)，以下条目保留较早阶段的状态。
+
 - 旧运行 `39783000526`：提交 `a8bad7b687c039c031836795b92fe6dada3c6d7b`，成功但 artifacts 为 0，不会因本次修改而补出安装包。
 - 检查时较新成功 Verify 为 `39877716098`，提交 `ba7b16bf28707e7979578ace7b78c3b746d62f13`；Android 当时仍无上传步骤。
 - 历史 `855e6a86eae23335fa701e091d8c30270f16219e/artifacts/CampusMesh-alpha-0.3.0-debug-arm64.apk` 是原本本地验证的归档。该提交是文件的存储位置，不据此推断其精确源码构建 SHA，也不把它归为任何新 CI 运行的输出。

@@ -16,6 +16,8 @@ use std::{
 use x25519_dalek::{PublicKey, StaticSecret};
 pub mod ffi;
 pub mod network;
+pub mod social;
+pub use social::*;
 pub type Result<T> = std::result::Result<T, String>;
 pub const MAX_FRAME: usize = 65536;
 const MAX_CACHE: usize = 4096;
@@ -32,7 +34,13 @@ impl Contact {
     }
     pub fn validate(&self) -> Result<()> {
         VerifyingKey::from_bytes(&bytes32(&self.sign)?).map_err(err)?;
-        bytes32(&self.exchange)?;
+        let exchange = PublicKey::from(bytes32(&self.exchange)?);
+        if !StaticSecret::from([0x42; 32])
+            .diffie_hellman(&exchange)
+            .was_contributory()
+        {
+            return Err("invalid exchange public key".into());
+        }
         if self.nickname.len() > 96 {
             return Err("nickname too long".into());
         }
@@ -58,11 +66,17 @@ pub struct Frame {
     pub envelope: Envelope,
     pub hops: u8,
 }
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 struct Payload {
     text: Option<String>,
     ack: Option<String>,
     group: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    group_revision: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    group_message_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    group_event: Option<GroupEvent>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Message {
@@ -73,8 +87,14 @@ pub struct Message {
     pub incoming: bool,
     pub status: String,
     pub time: u64,
+    #[serde(default)]
+    pub expires: u64,
+    #[serde(default)]
+    pub delivery: BTreeMap<String, String>,
+    #[serde(default)]
+    pub sender_name: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Engine {
     signing: String,
     exchange: String,
@@ -86,6 +106,22 @@ pub struct Engine {
     cache: BTreeMap<String, Frame>,
     seen: BTreeMap<String, u64>,
     pub history: Vec<Message>,
+    #[serde(default)]
+    pub friends: BTreeMap<String, FriendMetadata>,
+    #[serde(default)]
+    pub settings: MeshSettings,
+    #[serde(default)]
+    pub groups: BTreeMap<String, GroupRecord>,
+    #[serde(default)]
+    group_invites: BTreeMap<String, GroupInvite>,
+    #[serde(default)]
+    pending_groups: BTreeMap<String, GroupInvite>,
+    #[serde(default)]
+    group_outbox: BTreeMap<String, GroupDelivery>,
+    #[serde(default)]
+    legacy_groups: BTreeMap<String, String>,
+    #[serde(default)]
+    group_admissions: BTreeMap<String, BTreeMap<String, u64>>,
 }
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
@@ -145,6 +181,14 @@ impl Engine {
             cache: BTreeMap::new(),
             seen: BTreeMap::new(),
             history: Vec::new(),
+            friends: BTreeMap::new(),
+            settings: MeshSettings::default(),
+            groups: BTreeMap::new(),
+            group_invites: BTreeMap::new(),
+            pending_groups: BTreeMap::new(),
+            group_outbox: BTreeMap::new(),
+            legacy_groups: BTreeMap::new(),
+            group_admissions: BTreeMap::new(),
         }
     }
     pub fn add_contact(&mut self, c: Contact) -> Result<String> {
@@ -153,29 +197,65 @@ impl Engine {
         if self.contacts.len() >= 1000 && !self.contacts.contains_key(&id) {
             return Err("contact limit".into());
         }
+        if id == self.identity.id() {
+            return Err("不能把自己添加为好友".into());
+        }
+        if self
+            .contacts
+            .get(&id)
+            .is_some_and(|old| old.exchange != c.exchange)
+        {
+            return Err("设备 ID 相同但公钥发生变化，请核对身份".into());
+        }
+        self.friends.entry(id.clone()).or_default();
         self.contacts.insert(id.clone(), c);
         Ok(id)
     }
     pub fn prune(&mut self, now: u64) {
         for m in &mut self.history {
-            if !m.incoming && m.status == "queued" && m.time.saturating_add(86400) <= now {
+            let deadline = if m.expires == 0 {
+                m.time.saturating_add(86400)
+            } else {
+                m.expires
+            };
+            if !m.incoming
+                && (m.status == "queued" || m.status == "partially_delivered")
+                && deadline <= now
+            {
                 m.status = "expired".into();
+                for state in m.delivery.values_mut() {
+                    if state == "queued" {
+                        *state = "expired".into();
+                    }
+                }
             }
         }
         self.cache.retain(|_, f| f.envelope.expires > now);
         self.seen.retain(|_, exp| *exp > now);
+        self.group_invites.retain(|_, invite| invite.expires > now);
+        self.pending_groups.retain(|_, invite| invite.expires > now);
+        let retained: std::collections::BTreeSet<_> =
+            self.history.iter().map(|m| m.id.as_str()).collect();
+        self.group_outbox
+            .retain(|_, delivery| retained.contains(delivery.message_id.as_str()));
     }
     fn seal(&self, to: &Contact, payload: &Payload, now: u64) -> Result<Frame> {
         let ephemeral = StaticSecret::from(random::<32>());
         let nonce = random::<24>();
+        let expires = match &payload.group_event {
+            Some(GroupEvent::Join { invite }) => now
+                .saturating_add(self.settings.message_ttl_secs)
+                .min(invite.expires),
+            _ => now.saturating_add(self.settings.message_ttl_secs),
+        };
         let mut e = Envelope {
             version: 1,
             id: format!("{}:{}", self.identity.id(), hex::encode(random::<16>())),
             sender: self.identity.clone(),
             recipient: to.id(),
             created: now,
-            expires: now + 86400,
-            hop_limit: 8,
+            expires,
+            hop_limit: self.settings.hop_limit,
             ephemeral: hex::encode(PublicKey::from(&ephemeral).as_bytes()),
             nonce: hex::encode(nonce),
             ciphertext: String::new(),
@@ -216,7 +296,7 @@ impl Engine {
         if text.is_empty() || text.len() > 8192 || group.as_ref().is_some_and(|g| g.len() > 128) {
             return Err("invalid message length".into());
         }
-        if self.cache.len() >= MAX_CACHE {
+        if self.cache.len() >= self.settings.cache_capacity || self.seen.len() >= MAX_CACHE * 2 {
             return Err("outbox full".into());
         }
         let contact = self
@@ -229,6 +309,7 @@ impl Engine {
                 text: Some(text.into()),
                 ack: None,
                 group: group.clone(),
+                ..Payload::default()
             },
             now,
         )?;
@@ -243,6 +324,9 @@ impl Engine {
             incoming: false,
             status: "queued".into(),
             time: now,
+            expires: now.saturating_add(self.settings.message_ttl_secs),
+            delivery: BTreeMap::new(),
+            sender_name: self.identity.nickname.clone(),
         });
         Ok(id)
     }
@@ -287,13 +371,6 @@ impl Engine {
             return Err("seen capacity".into());
         }
         if e.recipient == self.identity.id() {
-            let trusted = self
-                .contacts
-                .get(&e.sender.id())
-                .ok_or("untrusted sender: exchange QR first")?;
-            if trusted.sign != e.sender.sign || trusted.exchange != e.sender.exchange {
-                return Err("identity key changed".into());
-            }
             let nonce = hex::decode(&e.nonce).map_err(err)?;
             if nonce.len() != 24 {
                 return Err("bad nonce".into());
@@ -315,48 +392,100 @@ impl Engine {
                 )
                 .map_err(err)?;
             let p: Payload = serde_json::from_slice(&plain).map_err(err)?;
-            if let Some(ack) = p.ack {
-                if let Some(m) = self
-                    .history
-                    .iter_mut()
-                    .find(|m| m.id == ack && !m.incoming && m.peer == e.sender.id())
-                {
-                    m.status = "delivered".into();
-                    self.cache.remove(&ack);
+            if usize::from(p.ack.is_some())
+                + usize::from(p.text.is_some())
+                + usize::from(p.group_event.is_some())
+                != 1
+                || (p.text.is_none()
+                    && (p.group.is_some()
+                        || p.group_revision.is_some()
+                        || p.group_message_id.is_some()))
+            {
+                return Err("invalid payload kind".into());
+            }
+            if let Some(ack) = p.ack.as_deref() {
+                if !self.known_sender(&e.sender) {
+                    return Err("untrusted receipt sender".into());
                 }
-            } else if let Some(text) = p.text {
-                if text.len() > 8192 || p.group.as_ref().is_some_and(|g| g.len() > 128) {
-                    return Err("payload too large".into());
-                }
-                if self.cache.len() >= MAX_CACHE {
-                    return Err("receipt cache full".into());
-                }
-                let ack = self.seal(
-                    trusted,
+                self.accept_receipt(&e.sender, ack);
+            } else {
+                let logical_id = if p.group_revision.is_some() || p.group_message_id.is_some() {
+                    Some(self.validate_group_message(&e.sender, &p)?)
+                } else {
+                    None
+                };
+                // Prepare the receipt before committing a membership change, so an
+                // unusable reply key cannot leave a half-applied group event.
+                let receipt = self.seal(
+                    &e.sender,
                     &Payload {
-                        text: None,
                         ack: Some(e.id.clone()),
-                        group: None,
+                        ..Payload::default()
                     },
                     now,
                 )?;
+                if p.group.as_ref().is_some_and(|g| {
+                    self.groups.contains_key(g)
+                        || g.split_once(':')
+                            .is_some_and(|(prefix, _)| social::valid_id(g, prefix))
+                }) && logical_id.is_none()
+                {
+                    return Err("群消息缺少成员版本或消息 ID".into());
+                }
+                if let Some(event) = p.group_event.clone() {
+                    self.accept_group_event(&e.sender, event, now)?;
+                } else {
+                    if logical_id.is_none()
+                        && !self.contacts.get(&e.sender.id()).is_some_and(|c| {
+                            c.sign == e.sender.sign && c.exchange == e.sender.exchange
+                        })
+                    {
+                        return Err("untrusted sender: exchange QR first".into());
+                    }
+                    let text = p.text.as_deref().ok_or("empty payload")?;
+                    if text.is_empty()
+                        || text.len() > 8192
+                        || p.group.as_ref().is_some_and(|g| g.len() > 128)
+                    {
+                        return Err("payload too large".into());
+                    }
+                }
+                if self.cache.len() >= self.settings.cache_capacity
+                    || self.seen.len() + 1 >= MAX_CACHE * 2
+                {
+                    return Err("receipt cache full".into());
+                }
+
                 self.seen
-                    .insert(ack.envelope.id.clone(), ack.envelope.expires);
-                self.cache.insert(ack.envelope.id.clone(), ack);
-                self.push_history(Message {
-                    id: e.id.clone(),
-                    peer: e.sender.id(),
-                    text,
-                    group: p.group,
-                    incoming: true,
-                    status: "received".into(),
-                    time: now,
-                });
-            } else {
-                return Err("empty payload".into());
+                    .insert(receipt.envelope.id.clone(), receipt.envelope.expires);
+                self.cache.insert(receipt.envelope.id.clone(), receipt);
+                if let Some(text) = p.text {
+                    let id = logical_id.unwrap_or_else(|| e.id.clone());
+                    if !self.history.iter().any(|message| message.id == id) {
+                        self.push_history(Message {
+                            id,
+                            peer: e.sender.id(),
+                            text,
+                            group: p.group,
+                            incoming: true,
+                            status: "received".into(),
+                            time: now,
+                            expires: e.expires,
+                            delivery: BTreeMap::new(),
+                            sender_name: e.sender.nickname.clone(),
+                        });
+                    }
+                }
+            }
+            if let Some(contact) = self.contacts.get_mut(&e.sender.id()) {
+                contact.nickname = e.sender.nickname.clone();
+                self.friends
+                    .entry(e.sender.id())
+                    .or_default()
+                    .last_message_at = now;
             }
         } else if self.relay {
-            if self.cache.len() >= MAX_CACHE {
+            if self.cache.len() >= self.settings.cache_capacity {
                 return Err("relay cache full".into());
             }
             self.cache.insert(
@@ -412,7 +541,30 @@ impl Engine {
         output
     }
     pub fn load(path: &Path) -> Result<Self> {
-        serde_json::from_slice(&fs::read(path).map_err(err)?).map_err(err)
+        let mut engine: Self =
+            serde_json::from_slice(&fs::read(path).map_err(err)?).map_err(err)?;
+        engine.settings.validate()?;
+        engine.identity.validate()?;
+        if engine.identity.sign
+            != hex::encode(
+                SigningKey::from_bytes(&bytes32(&engine.signing)?)
+                    .verifying_key()
+                    .to_bytes(),
+            )
+            || engine.identity.exchange
+                != hex::encode(
+                    PublicKey::from(&StaticSecret::from(bytes32(&engine.exchange)?)).as_bytes(),
+                )
+        {
+            return Err("本机身份文件与密钥不匹配".into());
+        }
+        for id in engine.contacts.keys() {
+            engine.friends.entry(id.clone()).or_default();
+        }
+        for group in engine.groups.values() {
+            group.definition.validate()?;
+        }
+        Ok(engine)
     }
     pub fn save(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {

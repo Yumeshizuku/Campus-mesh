@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  # Branch pushes and PR synchronize events share one validation run.
+  group: verify-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   core:
     runs-on: ubuntu-24.04
@@ -40,7 +44,7 @@ jobs:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018' 'cmake;3.22.1'
       - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018" ./scripts/build-android.sh
-      - run: cd android && ./gradlew lintDebug
+      - run: cd android && ./gradlew testDebugUnitTest lintDebug
       - name: Verify APK signature and alignment
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs android/app/build/outputs/apk/debug/app-debug.apk
@@ -87,7 +91,7 @@ jobs:
     # Native Apple Silicon keeps simulator startup and XCTest execution practical.
     # The device IPA and Intel compilation checks retain their existing runners.
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: maxim-lobanov/setup-xcode@v1.7.0
@@ -103,7 +107,9 @@ jobs:
           ./scripts/build-ios.sh --simulator
           ./scripts/test-ios.sh --build-tests
       - name: Boot iPhone simulator and run personal-use tests
-        timeout-minutes: 14
+        # Hosted simulator cold launch can exceed ten minutes before XCTest starts.
+        # Keep individual test limits at 300 seconds; allow all three cases to run.
+        timeout-minutes: 25
         run: ./scripts/test-ios.sh --skip-build
       - name: Upload concise UI report and screenshots
         uses: actions/upload-artifact@v7.0.2

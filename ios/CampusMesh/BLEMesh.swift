@@ -41,13 +41,18 @@ final class BLEMesh: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, C
     private var clientChannels=[UUID:Channel]()
     private var subscribers=[UUID:CBCentral]()
     private var serverChannels=[UUID:Channel]()
+    var syncInterval:()->TimeInterval = {5}
+    private var lastSync=Date.distantPast
     private var timer:Timer?
     private var running=false
     func start() {
         guard !running else {return};running=true
         central=CBCentralManager(delegate:self,queue:.main)
         peripheral=CBPeripheralManager(delegate:self,queue:.main)
-        timer=Timer.scheduledTimer(withTimeInterval:5,repeats:true){[weak self] _ in self?.tick()}
+        timer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
+            guard let self=self,Date().timeIntervalSince(self.lastSync)>=self.syncInterval() else{return}
+            self.lastSync=Date();self.tick()
+        }
         onStatus?("BLE 正在启动")
     }
     func stop(){running=false;timer?.invalidate();timer=nil;central?.stopScan();peripheral?.stopAdvertising();peripheral?.removeAllServices();for p in devices.values{central.cancelPeripheralConnection(p)};devices.removeAll();remoteCharacteristics.removeAll();ready.removeAll();clientChannels.removeAll();subscribers.removeAll();serverChannels.removeAll();onStatus?("BLE 已停止")}
