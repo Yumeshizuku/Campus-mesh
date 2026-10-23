@@ -6,6 +6,8 @@
 
 **个人使用可以在 Windows 或 Mac 上通过 [Sideloadly](https://sideloadly.io/)，用自己的免费 Apple 账户签名安装，无需上架。** 下载的 IPA 尚未签名，不能直接在手机上点击安装；免费账户通常需要每 7 天续签。操作步骤见 [iPhone 个人安装说明](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md)。应用尚未完成 iPhone 真机运行测试。
 
+2026-10-23，应用已通过 iOS 26.2 模拟器的实际操作检查：启动、四个页面切换、公钥二维码、昵称修改、通信暂停与恢复，以及昵称和自定义设置的重启保存均已验证。[完整检查流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)和 [IPA 构建与下载校验](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)也全部通过。[报告与实际截图](https://github.com/Yumeshizuku/Campus-mesh/blob/main/docs/IOS-IPA.md#启动与操作检查)已保存到仓库。
+
 下载文件：
 
 - [iPhone 未签名 IPA](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa) · [SHA-256 校验文件](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.sha256) · [版本与平台信息](https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa.json)

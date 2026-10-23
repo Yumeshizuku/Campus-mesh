@@ -31,6 +31,7 @@
 | Swift 源码解析 | 无语法解析错误；不等于类型检查/构建 | `reports/swift-syntax.txt` |
 | iOS SwiftUI/CoreBluetooth App 模拟器编译 | GitHub macOS / Xcode 26.2 编译通过 | [运行 39758596555 的 ios 任务](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39758596555) |
 | iPhone ARM64 Release 归档及 IPA 发布 | 成功；未签名 IPA 下载后的结构、平台与 SHA-256 检查通过 | [运行 39760676278](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39760676278)、[IPA 记录](IOS-IPA.md) |
+| iOS 26.2 模拟器实际操作 | 完整操作用例 1/1 通过：启动、公钥二维码、四个页面、昵称修改、通信启停，以及昵称与外观偏好的重启保存 | [运行 39877716098](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)、[报告与截图记录](reports/ios-personal-use.json) |
 | BLE / Wi-Fi Direct / 手机 LAN / 无线多跳 | **未执行，需要真机** | `DEVICE-TESTS.md` 待执行清单 |
 
 Android Lint 警告主要为内联界面字符串、较新版本权限属性、依赖更新提示与缺少 x86_64 ChromeOS ABI。未忽略 Lint 错误。为兼容旧版 Android 保留了一些已弃用 GATT API，构建有对应 deprecation warnings。Rust ELF LOAD segment 已设为 0x4000 对齐，JNI CMake 也开启 flexible page sizes；APK alignment 检查不代表 16 KB 真机运行已经通过。
@@ -81,3 +82,5 @@ Android Lint 警告主要为内联界面字符串、较新版本权限属性、�
 下一阶段先运行 `DEVICE-TESTS.md` 的双 Android / Android-iPhone BLE 和 LAN 用例，再验证无旁路的四手机三跳与混合链路；修复原生兼容性后逐级增加节点与负载。完整群成员协议、链路能耗评分、硬件密钥保护和生产级洪泛控制仍属未完成项，见 `LIMITATIONS.md`。
 
 GitHub macOS 环境已补齐 Xcode 编译能力。剩余真机验收需要真实 Android/iOS 设备，普通 iPhone 安装还需要有效 Apple 签名与匹配的描述文件。
+
+2026-10-23，新增的运行检查已在 Apple Silicon 上的 iPhone SE / iOS 26.2 模拟器通过。四项 Verify 任务和两项 IPA 构建、校验任务均成功；GitHub 注释合计为 0 错误、0 警告、1 条通知。该通知是 GitHub 对 macOS ARM64 运行器排队容量的提示，本次任务已实际完成。设备 IPA 构建与 Intel 模拟器编译仍使用 `macos-15-intel`。个人安装可使用免费 Apple 账户，步骤见[个人安装说明](IOS-IPA.md)；当前没有手机签名安装或无线通信的真机验收结果。

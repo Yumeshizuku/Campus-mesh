@@ -1,0 +1,131 @@
+{
+  "checked_at": "2026-10-23",
+  "version": "alpha-0.4.0",
+  "verify": {
+    "id": 39877716098,
+    "url": "https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098",
+    "commit": "ba7b16bf28707e7979578ace7b78c3b746d62f13",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120167282975,
+        "name": "android",
+        "conclusion": "success",
+        "annotations": []
+      },
+      {
+        "id": 120167283203,
+        "name": "ios",
+        "conclusion": "success",
+        "annotations": []
+      },
+      {
+        "id": 120167283268,
+        "name": "ios-ui",
+        "conclusion": "success",
+        "annotations": [
+          {
+            "path": ".github",
+            "blob_href": "https://github.com/Yumeshizuku/Campus-mesh/blob/ba7b16bf28707e7979578ace7b78c3b746d62f13/.github",
+            "start_line": 1,
+            "start_column": null,
+            "end_line": 1,
+            "end_column": null,
+            "annotation_level": "notice",
+            "title": "",
+            "message": "Due to capacity constraints, jobs targeting macOS arm64 runners may experience longer queue times.",
+            "raw_details": ""
+          }
+        ]
+      },
+      {
+        "id": 120167283272,
+        "name": "core",
+        "conclusion": "success",
+        "annotations": []
+      }
+    ]
+  },
+  "ipa": {
+    "id": 39877716031,
+    "url": "https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031",
+    "commit": "ba7b16bf28707e7979578ace7b78c3b746d62f13",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120167282788,
+        "name": "build",
+        "conclusion": "success",
+        "annotations": []
+      },
+      {
+        "id": 120168558212,
+        "name": "verify-package",
+        "conclusion": "success",
+        "annotations": []
+      },
+      {
+        "id": 120168617104,
+        "name": "publish",
+        "conclusion": "skipped",
+        "annotations": []
+      }
+    ]
+  },
+  "ui_result": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "48B2DA2E-AF18-4E36-BB25-B25969A4EBCF",
+          "deviceName": "iPhone SE (3rd generation)",
+          "modelName": "iPhone SE (3rd generation)",
+          "osBuildNumber": "23C54",
+          "osVersion": "26.2",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 1,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "CampusMesh · Built with macOS 15.7.9",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792715401.321,
+    "passedTests": 1,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792715261.039,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - CampusMesh",
+    "topInsights": [],
+    "totalTestCount": 1
+  },
+  "checks": [
+    "real Rust core startup",
+    "four main tabs",
+    "public identity QR",
+    "nickname editing and persistence after relaunch",
+    "pause and resume communication",
+    "appearance toggle and persistence after relaunch"
+  ],
+  "published_ipa": {
+    "url": "https://github.com/Yumeshizuku/Campus-mesh/releases/download/alpha-0.4.0/CampusMesh-alpha-0.4.0-unsigned.ipa",
+    "source_commit": "48d71dbbd57454c4a0737f5d13413d675fe101c3",
+    "sha256": "bdc17ee2d78032fbb753b619f0bf271f4f4fd8f63c1b80a7a3d453ba3e710f45",
+    "signing": "unsigned",
+    "source_trees_match_tested_commit": {
+      "ios/CampusMesh": true,
+      "core": true
+    }
+  },
+  "personal_device_installation_verified": false,
+  "physical_wireless_testing_verified": false
+}

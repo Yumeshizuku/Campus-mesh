@@ -2,6 +2,14 @@
 
 这里按版本记录 Campus Mesh 的主要变化。当前 Android 测试版是 `alpha-0.3.0`，iOS 测试版是 `alpha-0.4.0`；早期 0.2 的记录保留当时的版本名称。
 
+## iPhone 个人安装与操作验证 · 2026-10-23
+
+补充了把应用装到自己 iPhone 上的具体步骤。你可以在 Windows 或 Mac 上使用 Sideloadly，用自己的免费 Apple 账户完成个人签名和安装，无需上架或购买开发者会员。说明中也写清了免费签名的续签要求，以及更新时怎样保留本机身份和聊天记录。
+
+这次增加了真正启动应用的模拟器操作检查。在 iOS 26.2 上，应用启动、公钥二维码、四个页面切换、昵称修改、通信暂停与恢复，以及昵称和自定义设置的重启保存均已通过。操作测试使用 Apple Silicon，先编译测试程序再启动模拟器；设备 IPA 构建和 Intel 编译检查继续使用原有环境。
+
+[完整验证流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)和 [IPA 构建与下载校验](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)均已通过。实际截图和结果保存在[验证记录](docs/reports/ios-personal-use.json)中。下载包仍是 `alpha-0.4.0`，需要完成个人签名才能装到普通 iPhone；手机安装和无线收发仍需在真实设备上确认。
+
 ## 工作流兼容性更新 · 2026-10-22
 
 这次更新处理了 GitHub 构建页面中的旧版 Actions 弃用提示。代码检出、Java 和 Android 环境准备、Xcode 选择，以及产物上传下载组件，都已换成支持 Node.js 24 的版本。

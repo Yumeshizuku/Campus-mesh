@@ -1,0 +1,248 @@
+Command line invocation:
+    /Applications/Xcode_26.2.app/Contents/Developer/usr/bin/xcodebuild -project ios/CampusMesh.xcodeproj -scheme CampusMesh -sdk iphonesimulator -configuration Debug -destination "platform=iOS Simulator,id=48B2DA2E-AF18-4E36-BB25-B25969A4EBCF" -destination-timeout 180 -derivedDataPath /Users/runner/work/Campus-mesh/Campus-mesh/ios/build/Simulator -resultBundlePath /Users/runner/work/Campus-mesh/Campus-mesh/ios/build/PersonalUse-20261023T002609Z.xcresult -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 300 CODE_SIGNING_ALLOWED=NO test-without-building
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+    SDKROOT = iphonesimulator26.2
+
+Writing result bundle at path:
+	/Users/runner/work/Campus-mesh/Campus-mesh/ios/build/PersonalUse-20261023T002609Z.xcresult
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:48B2DA2E-AF18-4E36-BB25-B25969A4EBCF, OS:26.2, name:iPhone SE (3rd generation) }
+{ platform:iOS Simulator, arch:x86_64, id:48B2DA2E-AF18-4E36-BB25-B25969A4EBCF, OS:26.2, name:iPhone SE (3rd generation) }
+2026-10-23 00:28:15.761558+0000 CampusMeshUITests-Runner[7563:29205] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'All tests' started at 2026-10-23 00:28:22.637.
+Test Suite 'CampusMeshUITests.xctest' started at 2026-10-23 00:28:22.639.
+Test Suite 'PersonalUseTests' started at 2026-10-23 00:28:22.639.
+Test Case '-[CampusMeshUITests.PersonalUseTests testPersonalUseAndPersistence]' started.
+    t =     0.00s Start Test at 2026-10-23 00:28:22.640
+    t =     0.85s Set Up
+    t =     0.87s Open org.campusmesh.app
+    t =     0.87s     Launch org.campusmesh.app
+    t =    10.37s         Setting up automation session
+    t =    13.12s         Wait for org.campusmesh.app to idle
+    t =    17.20s Tap Target Application 'org.campusmesh.app'
+    t =    17.20s     Wait for org.campusmesh.app to idle
+    t =    17.21s     Find the Target Application 'org.campusmesh.app'
+    t =    17.63s     Check for interrupting elements affecting "Campus Mesh alpha" Application
+    t =    17.66s         Wait for com.apple.springboard to idle
+    t =    17.90s     Found 1 interrupting element:
+    t =    17.90s         Find the "“Campus Mesh alpha” Would Like to Send You Notifications" Alert
+    t =    17.96s "“Campus Mesh alpha” Would Like to Send You Notifications" Alert from Application 'com.apple.springboard'
+    t =    17.96s     Invoking UI interruption monitors for "“Campus Mesh alpha” Would Like to Send You Notifications" Alert from Application 'com.apple.springboard'
+    t =    17.96s Invoking System permission
+    t =    17.97s             Checking existence of `"允许" Button`
+    t =    18.02s             Checking existence of `"Allow" Button`
+    t =    18.05s             Tap "Allow" Button
+    t =    18.06s                 Wait for com.apple.springboard to idle
+    t =    18.06s                 Find the "Allow" Button
+    t =    18.09s                 Check for interrupting elements affecting "Allow" Button
+    t =    18.16s                 Synthesize event
+    t =    18.62s                 Wait for com.apple.springboard to idle
+    t =    18.88s         Verifying handling...
+    t =    18.95s Confirmed successful handling of interrupting element
+    t =    18.95s     Synthesize event
+    t =    19.29s     Wait for org.campusmesh.app to idle
+    t =    19.30s Tap "聊天" Button
+    t =    19.30s     Wait for org.campusmesh.app to idle
+    t =    19.30s     Find the "聊天" Button
+    t =    19.37s     Check for interrupting elements affecting "bubble.left.and.bubble.right.fill" Button
+    t =    19.44s     Synthesize event
+    t =    19.75s     Wait for org.campusmesh.app to idle
+    t =    21.28s Waiting 30.0s for "本机已就绪 · 0 位好友" StaticText to exist
+    t =    22.29s     Checking `Expect predicate `existsNoRetry == 1` for object "本机已就绪 · 0 位好友" StaticText`
+    t =    22.29s         Checking existence of `"本机已就绪 · 0 位好友" StaticText`
+    t =    22.50s Added attachment named '01-聊天'
+    t =    22.50s Tap "附近" Button
+    t =    22.50s     Wait for org.campusmesh.app to idle
+    t =    22.50s     Find the "附近" Button
+    t =    22.57s     Check for interrupting elements affecting "antenna.radiowaves.left.and.right" Button
+    t =    22.62s     Synthesize event
+    t =    22.96s     Wait for org.campusmesh.app to idle
+    t =    25.02s Waiting 5.0s for "粘贴公钥文本" Button to exist
+    t =    26.04s     Checking `Expect predicate `existsNoRetry == 1` for object "粘贴公钥文本" Button`
+    t =    26.04s         Checking existence of `"粘贴公钥文本" Button`
+    t =    26.22s Added attachment named '02-附近'
+    t =    26.22s Tap "身份" Button
+    t =    26.22s     Wait for org.campusmesh.app to idle
+    t =    26.22s     Find the "身份" Button
+    t =    26.28s     Check for interrupting elements affecting "person.crop.circle" Button
+    t =    26.32s     Synthesize event
+    t =    26.63s     Wait for org.campusmesh.app to idle
+    t =    36.11s Waiting 10.0s for "我的好友公钥二维码" Image to exist
+    t =    37.16s     Checking `Expect predicate `existsNoRetry == 1` for object "我的好友公钥二维码" Image`
+    t =    37.16s         Checking existence of `"我的好友公钥二维码" Image`
+    t =    37.22s Tap "编辑" Button
+    t =    37.22s     Wait for org.campusmesh.app to idle
+    t =    37.23s     Find the "编辑" Button
+    t =    37.27s     Check for interrupting elements affecting "编辑" Button
+    t =    37.31s     Synthesize event
+    t =    37.63s     Wait for org.campusmesh.app to idle
+    t =    39.40s Waiting 5.0s for TextField (First Match) to exist
+    t =    40.46s     Checking `Expect predicate `existsNoRetry == 1` for object TextField (First Match)`
+    t =    40.46s         Checking existence of `TextField (First Match)`
+    t =    40.71s Tap TextField (First Match)
+    t =    40.71s     Wait for org.campusmesh.app to idle
+    t =    40.71s     Find the TextField (First Match)
+    t =    40.90s     Check for interrupting elements affecting "昵称" TextField
+    t =    41.04s     Synthesize event
+    t =    41.35s     Wait for org.campusmesh.app to idle
+    t =    42.22s Find the "昵称" TextField
+    t =    42.50s Type '' into "昵称" TextField
+    t =    42.50s     Wait for org.campusmesh.app to idle
+    t =    42.50s     Find the "昵称" TextField
+    t =    42.57s     Check for interrupting elements affecting "昵称" TextField
+    t =    42.65s     Synthesize event
+    t =    42.89s     Wait for org.campusmesh.app to idle
+    t =    43.45s Type 'Alpha 45B3C763' into "昵称" TextField
+    t =    43.45s     Wait for org.campusmesh.app to idle
+    t =    43.53s     Find the "昵称" TextField
+    t =    43.67s     Check for interrupting elements affecting "昵称" TextField
+    t =    43.75s     Synthesize event
+    t =    44.20s     Wait for org.campusmesh.app to idle
+    t =    44.48s Tap "保存" Button
+    t =    44.48s     Wait for org.campusmesh.app to idle
+    t =    44.88s     Find the "保存" Button
+    t =    45.30s     Check for interrupting elements affecting "保存" Button
+    t =    45.43s     Synthesize event
+    t =    45.75s     Wait for org.campusmesh.app to idle
+    t =    46.61s Waiting 5.0s for "Alpha 45B3C763" StaticText to exist
+    t =    47.66s     Checking `Expect predicate `existsNoRetry == 1` for object "Alpha 45B3C763" StaticText`
+    t =    47.66s         Checking existence of `"Alpha 45B3C763" StaticText`
+    t =    47.76s Added attachment named '03-身份'
+    t =    47.76s Checking existence of `"暂停通信" Button`
+    t =    47.81s Swipe up Target Application 'org.campusmesh.app'
+    t =    47.81s     Wait for org.campusmesh.app to idle
+    t =    47.81s     Find the Target Application 'org.campusmesh.app'
+    t =    47.84s     Check for interrupting elements affecting "Campus Mesh alpha" Application
+    t =    48.18s     Synthesize event
+    t =    48.70s     Wait for org.campusmesh.app to idle
+    t =    50.49s Checking existence of `"暂停通信" Button`
+    t =    51.05s Find the "暂停通信" Button
+    t =    51.25s Find the "暂停通信" Button
+    t =    51.37s Find the TabBar (First Match)
+    t =    51.56s Tap "暂停通信" Button
+    t =    51.56s     Wait for org.campusmesh.app to idle
+    t =    51.57s     Find the "暂停通信" Button
+    t =    51.71s     Check for interrupting elements affecting "暂停通信" Button
+    t =    51.79s     Synthesize event
+    t =    52.13s     Wait for org.campusmesh.app to idle
+    t =    52.43s Waiting 5.0s for "恢复通信" Button to exist
+    t =    53.46s     Checking `Expect predicate `existsNoRetry == 1` for object "恢复通信" Button`
+    t =    53.46s         Checking existence of `"恢复通信" Button`
+    t =    53.51s Tap "聊天" Button
+    t =    53.51s     Wait for org.campusmesh.app to idle
+    t =    53.52s     Find the "聊天" Button
+    t =    53.59s     Check for interrupting elements affecting "bubble.left.and.bubble.right.fill" Button
+    t =    53.77s     Synthesize event
+    t =    54.06s     Wait for org.campusmesh.app to idle
+    t =    55.37s Waiting 5.0s for "通信已暂停" StaticText to exist
+    t =    56.41s     Checking `Expect predicate `existsNoRetry == 1` for object "通信已暂停" StaticText`
+    t =    56.41s         Checking existence of `"通信已暂停" StaticText`
+    t =    56.47s Tap "身份" Button
+    t =    56.47s     Wait for org.campusmesh.app to idle
+    t =    56.47s     Find the "身份" Button
+    t =    56.52s     Check for interrupting elements affecting "person.crop.circle" Button
+    t =    56.56s     Synthesize event
+    t =    56.88s     Wait for org.campusmesh.app to idle
+    t =    58.07s Checking existence of `"恢复通信" Button`
+    t =    58.13s Find the "恢复通信" Button
+    t =    58.19s Find the "恢复通信" Button
+    t =    58.24s Find the TabBar (First Match)
+    t =    58.31s Tap "恢复通信" Button
+    t =    58.31s     Wait for org.campusmesh.app to idle
+    t =    58.31s     Find the "恢复通信" Button
+    t =    58.38s     Check for interrupting elements affecting "恢复通信" Button
+    t =    58.45s     Synthesize event
+    t =    58.75s     Wait for org.campusmesh.app to idle
+    t =    58.95s Tap "聊天" Button
+    t =    58.95s     Wait for org.campusmesh.app to idle
+    t =    59.01s     Find the "聊天" Button
+    t =    59.05s     Check for interrupting elements affecting "bubble.left.and.bubble.right.fill" Button
+    t =    59.10s     Synthesize event
+    t =    59.40s     Wait for org.campusmesh.app to idle
+    t =    61.00s Waiting 10.0s for "本机已就绪 · 0 位好友" StaticText to exist
+    t =    62.06s     Checking `Expect predicate `existsNoRetry == 1` for object "本机已就绪 · 0 位好友" StaticText`
+    t =    62.06s         Checking existence of `"本机已就绪 · 0 位好友" StaticText`
+    t =    62.11s Tap "自定义" Button
+    t =    62.11s     Wait for org.campusmesh.app to idle
+    t =    62.11s     Find the "自定义" Button
+    t =    62.18s     Check for interrupting elements affecting "slider.horizontal.3" Button
+    t =    62.23s     Synthesize event
+    t =    62.53s     Wait for org.campusmesh.app to idle
+    t =    65.18s Waiting 5.0s for "紧凑气泡" Switch to exist
+    t =    66.19s     Checking `Expect predicate `existsNoRetry == 1` for object "紧凑气泡" Switch`
+    t =    66.19s         Checking existence of `"紧凑气泡" Switch`
+    t =    66.27s Checking existence of `"紧凑气泡" Switch`
+    t =    66.32s Find the "紧凑气泡" Switch
+    t =    66.39s Find the "紧凑气泡" Switch
+    t =    66.46s Find the TabBar (First Match)
+    t =    66.49s Find the "紧凑气泡" Switch
+    t =    66.59s Tap "紧凑气泡" Switch[0.90, 0.50]
+    t =    66.59s     Wait for org.campusmesh.app to idle
+    t =    67.02s     Find the "紧凑气泡" Switch
+    t =    67.23s     Check for interrupting elements affecting "紧凑气泡" Switch
+    t =    67.30s     Synthesize event
+    t =    67.30s         Find the "紧凑气泡" Switch
+    t =    67.37s         Find the "紧凑气泡" Switch
+    t =    67.42s         Find the "紧凑气泡" Switch
+    t =    67.77s     Wait for org.campusmesh.app to idle
+    t =    70.19s Checking `Expect predicate `BLOCKPREDICATE(0x600000cb01b0)` for object "紧凑气泡" Switch`
+    t =    70.19s     Find the "紧凑气泡" Switch
+    t =    70.33s Find the "紧凑气泡" Switch
+    t =    70.47s Added attachment named '04-自定义'
+    t =    70.47s Terminate org.campusmesh.app:8369
+    t =    71.50s Open org.campusmesh.app
+    t =    71.50s     Launch org.campusmesh.app
+    t =    72.89s         Setting up automation session
+    t =    74.88s         Wait for org.campusmesh.app to idle
+    t =    78.28s Tap "聊天" Button
+    t =    78.28s     Wait for org.campusmesh.app to idle
+    t =    78.28s     Find the "聊天" Button
+    t =    78.78s     Check for interrupting elements affecting "聊天" Button
+    t =    78.85s     Synthesize event
+    t =    79.17s     Wait for org.campusmesh.app to idle
+    t =    81.00s Waiting 30.0s for "本机已就绪 · 0 位好友" StaticText to exist
+    t =    82.06s     Checking `Expect predicate `existsNoRetry == 1` for object "本机已就绪 · 0 位好友" StaticText`
+    t =    82.06s         Checking existence of `"本机已就绪 · 0 位好友" StaticText`
+    t =    82.13s Tap "身份" Button
+    t =    82.13s     Wait for org.campusmesh.app to idle
+    t =    82.14s     Find the "身份" Button
+    t =    82.18s     Check for interrupting elements affecting "person.crop.circle" Button
+    t =    82.22s     Synthesize event
+    t =    82.51s     Wait for org.campusmesh.app to idle
+    t =    91.37s Waiting 10.0s for "Alpha 45B3C763" StaticText to exist
+    t =    92.39s     Checking `Expect predicate `existsNoRetry == 1` for object "Alpha 45B3C763" StaticText`
+    t =    92.39s         Checking existence of `"Alpha 45B3C763" StaticText`
+    t =    92.45s Checking existence of `"我的好友公钥二维码" Image`
+    t =    92.49s Tap "自定义" Button
+    t =    92.49s     Wait for org.campusmesh.app to idle
+    t =    92.49s     Find the "自定义" Button
+    t =    92.55s     Check for interrupting elements affecting "slider.horizontal.3" Button
+    t =    92.60s     Synthesize event
+    t =    92.92s     Wait for org.campusmesh.app to idle
+    t =    95.80s Waiting 5.0s for "紧凑气泡" Switch to exist
+    t =    96.81s     Checking `Expect predicate `existsNoRetry == 1` for object "紧凑气泡" Switch`
+    t =    96.81s         Checking existence of `"紧凑气泡" Switch`
+    t =    96.88s Find the "紧凑气泡" Switch
+    t =    96.94s Checking existence of `"Campus Mesh" Alert`
+    t =    97.06s Tear Down
+Test Case '-[CampusMeshUITests.PersonalUseTests testPersonalUseAndPersistence]' passed (97.549 seconds).
+Test Suite 'PersonalUseTests' passed at 2026-10-23 00:30:00.190.
+	 Executed 1 test, with 0 failures (0 unexpected) in 97.549 (97.551) seconds
+Test Suite 'CampusMeshUITests.xctest' passed at 2026-10-23 00:30:00.191.
+	 Executed 1 test, with 0 failures (0 unexpected) in 97.549 (97.552) seconds
+Test Suite 'All tests' passed at 2026-10-23 00:30:00.191.
+	 Executed 1 test, with 0 failures (0 unexpected) in 97.549 (97.554) seconds
+2026-10-23 00:30:01.226 xcodebuild[5135:20969] [MT] IDETestOperationsObserverDebug: 134.338 elapsed -- Testing started completed.
+2026-10-23 00:30:01.227 xcodebuild[5135:20969] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-23 00:30:01.227 xcodebuild[5135:20969] [MT] IDETestOperationsObserverDebug: 134.338 sec, +134.338 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/Campus-mesh/Campus-mesh/ios/build/PersonalUse-20261023T002609Z.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

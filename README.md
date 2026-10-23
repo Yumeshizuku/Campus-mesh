@@ -10,6 +10,8 @@
 
 模拟器编译和 iPhone 设备版归档已在 GitHub 的 Xcode 26.2 环境通过，IPA 也已发布。个人使用可以在 Windows 或 Mac 上通过 Sideloadly，用自己的免费 Apple 账户签名安装，无需上架。下载文件尚未签名，手机安装及无线通信仍需真机确认；详细步骤见 [iPhone 个人安装说明](docs/IOS-IPA.md)。具体变化见 [Liquid Glass 更新说明](docs/LIQUID-GLASS.md)。Android 当前版本仍为 `alpha-0.3.0`。
 
+iOS 26.2 模拟器上的基础操作也已实测通过，包括页面切换、公钥二维码、昵称修改、通信暂停与恢复，以及昵称和自定义设置的重启保存。[验证报告](docs/VERIFICATION.md)中保存了运行记录和实际截图。
+
 测试版统一使用 **`alpha-版本号`** 命名，应用和下载文件都会标明对应版本。各次更新汇总在 [更新日志](CHANGELOG.md)，命名规则见 [版本命名约定](docs/RELEASE-NAMING.md)。
 
 ## 0.3 Telegram 风格界面

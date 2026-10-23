@@ -82,3 +82,7 @@ python3 scripts/package-ios-ipa.py verify artifacts/CampusMesh-alpha-0.4.0-unsig
 macOS 上运行 `./scripts/test-ios.sh`，会编译应用并在已安装的 iOS 26 或更新版本的 iPhone 模拟器中真正启动它。检查覆盖通信核心初始化、公钥二维码、四个主页面、昵称修改及重启保存、暂停与恢复通信、自定义偏好的重启保存。测试调用实际应用和 Rust 核心，没有用模拟数据替代身份。
 
 `Verify` 工作流执行相同步骤，并保留 `ios-personal-use-tests` 附件中的 XCTest 结果、页面截图和日志。模拟器检查不能代替个人签名、iPhone 安装或无线链路的真机测试。
+
+2026-10-23，这套检查已在[运行 39877716098](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716098)中通过。实际使用的是 iOS 26.2、ARM64 的 iPhone SE 模拟器，完整操作用例 1 项通过、0 项失败。核心、Android 和 Intel iOS 编译任务也全部通过；[同一提交的 IPA 流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39877716031)完成了设备编译、上传、下载及校验。
+
+运行测试使用 `macos-15` 的 Apple Silicon 环境，测试程序会在启动模拟器前完成编译。界面和通信核心的源码与上方已发布 IPA 一致，发布文件及其校验和保持原记录。详细结果见[结构化报告](reports/ios-personal-use.json)和[XCTest 日志](reports/ios-personal-use-tests.txt)，实际截图包括[聊天](reports/ios-personal-use/01-chat.png)、[附近](reports/ios-personal-use/02-nearby.png)、[身份](reports/ios-personal-use/03-identity.png)和[自定义](reports/ios-personal-use/04-customization.png)。Actions 中另有体积较小的 `ios-personal-use-report` 附件，方便单独下载报告和截图。
