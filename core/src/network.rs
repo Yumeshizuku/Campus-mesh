@@ -203,8 +203,9 @@ impl Runtime {
                                         if let Ok(p) = parts[2].parse::<u16>() {
                                             if p != 0 {
                                                 let a = SocketAddr::new(addr.ip(), p);
+                                                let live = e.lock().unwrap();
                                                 let mut ps = ps.lock().unwrap();
-                                                if ps.len() < settings.max_peers
+                                                if ps.len() < live.settings.max_peers
                                                     || ps.contains_key(&a)
                                                 {
                                                     ps.entry(a)
@@ -280,7 +281,8 @@ impl Runtime {
         if address.port() == 0 {
             return Err("端口不能为 0".into());
         }
-        let limit = self.engine.lock().map_err(err)?.settings.max_peers;
+        let live = self.engine.lock().map_err(err)?;
+        let limit = live.settings.max_peers;
         let mut ps = self.peers.lock().map_err(err)?;
         if ps.len() >= limit && !ps.contains_key(&address) {
             return Err("neighbor limit".into());

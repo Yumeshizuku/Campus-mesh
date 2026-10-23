@@ -177,6 +177,8 @@ fn verify(contact: &Contact, data: &[u8], signature: &str) -> Result<()> {
 }
 pub(crate) fn valid_id(id: &str, sender: &str) -> bool {
     id.len() == 97
+        && sender.len() == 64
+        && hex::decode(sender).is_ok_and(|bytes| bytes.len() == 32)
         && id.starts_with(&format!("{sender}:"))
         && hex::decode(&id[65..]).is_ok_and(|x| x.len() == 16)
 }
@@ -221,7 +223,10 @@ impl Engine {
             card.contact
         };
         let id = self.add_contact(contact)?;
-        self.friends.entry(id.clone()).or_default().added_at = now;
+        let metadata = self.friends.entry(id.clone()).or_default();
+        if metadata.added_at == 0 {
+            metadata.added_at = now;
+        }
         Ok(serde_json::json!({"kind":"friend","id":id,"device_id":id}))
     }
     pub fn set_remark(&mut self, id: &str, remark: &str) -> Result<()> {
@@ -781,6 +786,15 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn malformed_group_identifiers_cannot_panic_at_a_utf8_boundary() {
+        let prefix = "组".repeat(32);
+        assert!(!valid_id(&format!("{prefix}:"), &prefix));
+        assert!(!valid_id(
+            &format!("{}:{}", "z".repeat(64), "0".repeat(32)),
+            &"z".repeat(64)
+        ));
+    }
     #[test]
     fn receipt_is_bound_to_the_exact_group_recipient() {
         let mut owner = Engine::new("owner");
