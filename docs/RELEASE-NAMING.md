@@ -7,7 +7,7 @@
 | 应用显示名称 | Campus Mesh alpha |
 | Android 版本标识 | alpha-0.5.0；内部 versionCode 为 5 |
 | iOS 身份页测试版本 | alpha-0.5.0；内部 build 为 6 |
-| Android 安装包 | CampusMesh-alpha-0.5.0-debug-arm64.apk |
+| Android 安装包 | CampusMesh-alpha-0.5.0-vc5-debug-arm64-<SHA>-run<ID>-<次数>.apk |
 | Android 完整交付包 | Campus-Mesh-<版本>-delivery.zip（历史交付包） |
 | iOS 源码包 | Campus-Mesh-iOS-<版本>-source.zip（历史源码包） |
 | iOS 未签名真机包 | CampusMesh-alpha-0.5.0-unsigned.ipa |

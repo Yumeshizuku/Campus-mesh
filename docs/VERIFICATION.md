@@ -4,7 +4,23 @@
 
 本轮实现了签名好友卡、持久化设备 ID、本机备注、可配置 Mesh 与群主签名的群聊协议。新增覆盖扫码入群、单次和过期邀请、群成员之间经中继收发、送达汇总、退群与解散、离线后群信息同步、容量不足时整条发送回滚，以及旧状态和群发组合迁移的测试。移动端接口还检查备注、参数和群聊的重启保存，以及保存失败后的内存回滚。
 
-GitHub 正在检查 Android 构建与 Lint、Intel iOS 编译、Apple Silicon 模拟器操作和 ARM64 IPA 打包。最终运行结果将在完成后更新到这里；真实手机无线验收不包含在模拟器结果中。
+[本轮 Verify](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911054046) 已通过核心、Android、iOS 编译和 iOS 操作测试。[IPA 流程](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392)也已完成设备包构建、上传、重新下载及校验。应用源码为 `49bbdcaa951736ea79ab5cff510368fbe7a46a71`；Android 构建使用 PR 的临时合并提交 `71441d5efd36b93de5a2a2e5abc2e594ef70aab7`，这不表示 PR 已合并到 main。之后补充的验证文档不改变应用代码。
+
+| 本轮检查 | 结果 |
+|---|---|
+| Rust 格式、Clippy 与核心测试 | 通过，26 项测试全部成功 |
+| 真实 TCP 四进程三跳、分区与重启 | 通过，消息只记录一次且回执返回 |
+| 10 / 30 / 100 / 300 虚拟节点仿真 | 通过；仅代表仿真场景 |
+| Android 编译、二维码往返测试、Lint、签名与 16 KB 对齐 | 通过；二维码测试覆盖中文和表情 |
+| Android 打包脚本测试 | 9 项通过 |
+| Intel iOS 编译 | 通过 |
+| iOS 26.2 / iPhone SE 模拟器 | 3 项操作测试通过，覆盖设备 ID、昵称、备注、群聊、邀请二维码和 Mesh 参数的重启保存 |
+| iPhone ARM64 IPA | 构建与下载校验通过；仍需个人签名 |
+| 本地下载复核 | APK 摘要与源码来源、IPA 摘要与设备包结构均通过 |
+
+[下载本轮 APK](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911054046/artifacts/12482538184) · [下载本轮 IPA](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392/artifacts/12482503417) · [结构化验证记录](reports/alpha-0.5.0/validation.json) · [原始操作测试摘要](reports/alpha-0.5.0/ios-ui-summary.json)
+
+操作截图：[设备身份](reports/alpha-0.5.0/03-identity.png)、[Mesh 参数](reports/alpha-0.5.0/05-mesh-settings.png)、[群邀请](reports/alpha-0.5.0/06-group-invite.png)、[好友备注](reports/alpha-0.5.0/07-friend-remark.png)。模拟器结果不包含手机安装、相机实际扫码、蓝牙、无线多跳或熄屏验收。
 
 
 更新至 2026-10-23（UTC）。Android APK 和 iPhone IPA 均已完成构建，核心通信测试与 iOS 模拟器基础操作检查已通过。iPhone 下载包仍需个人签名，手机安装、跨平台无线收发和无线多跳还需要真机验证。下方按阶段保留检查范围、结果和原始记录。

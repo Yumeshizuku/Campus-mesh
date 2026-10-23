@@ -10,7 +10,7 @@ Android 和 iOS 统一升级到 alpha-0.5.0。用户可以互扫带签名的二�
 
 原来的“常用群发”已替换为有固定群 ID 和共享成员名单的群聊。群主可以管理最多 32 位成员、生成入群二维码和解散群聊，成员可以退群。群消息继续经 Mesh 多跳传递，分别加密给各成员，并合并显示送达进度。旧成员组合、相关记录和草稿会迁移，原有 Telegram 风格布局与 iOS Liquid Glass 控件继续保留。
 
-使用方法、参数范围、升级行为和离线边界见[好友与群聊说明](docs/FRIENDS-GROUPS.md)。本轮构建与测试在 [GitHub Actions](https://github.com/Yumeshizuku/Campus-mesh/actions) 中执行，结果见[验证报告](docs/VERIFICATION.md)。测试版统一使用 **`alpha-版本号`** 命名，历史变化见[更新日志](CHANGELOG.md)。
+使用方法、参数范围、升级行为和离线边界见[好友与群聊说明](docs/FRIENDS-GROUPS.md)。本轮核心、Android、iOS 编译和 3 项模拟器操作检查均已通过，结果和截图见[验证报告](docs/VERIFICATION.md)。[下载 APK](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911054046/artifacts/12482538184) · [下载 IPA](https://github.com/Yumeshizuku/Campus-mesh/actions/runs/39911048392/artifacts/12482503417)（解压后个人签名安装）。测试版统一使用 **`alpha-版本号`** 命名，历史变化见[更新日志](CHANGELOG.md)。
 
 ## 项目结构
 
