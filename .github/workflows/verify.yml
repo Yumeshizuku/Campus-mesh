@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  # Branch pushes and PR synchronize events share one validation run.
+  group: verify-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   core:
     runs-on: ubuntu-24.04

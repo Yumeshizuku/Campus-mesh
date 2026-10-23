@@ -32,8 +32,9 @@ final class PersonalUseTests: XCTestCase {
         XCTAssertTrue(app.images["我的好友公钥二维码"].waitForExistence(timeout: 10))
         let deviceID=app.staticTexts["deviceID"]
         XCTAssertTrue(deviceID.waitForExistence(timeout:5))
-        let originalID=deviceID.label
+        let originalID=String(deviceID.label.suffix(64))
         XCTAssertEqual(originalID.count,64)
+        XCTAssertTrue(originalID.allSatisfy {"0123456789abcdef".contains($0)})
         app.buttons["编辑"].tap()
         let editor = app.alerts["修改本机昵称"]
         let field = editor.textFields.firstMatch
@@ -81,7 +82,7 @@ final class PersonalUseTests: XCTestCase {
         app.tabBars.buttons["身份"].tap()
         XCTAssertTrue(app.staticTexts[nickname].waitForExistence(timeout: 10), "Nickname must survive a full app restart")
         XCTAssertTrue(app.images["我的好友公钥二维码"].exists)
-        XCTAssertEqual(app.staticTexts["deviceID"].label,originalID,"Changing the nickname and restarting must preserve the device ID")
+        XCTAssertEqual(String(app.staticTexts["deviceID"].label.suffix(64)),originalID,"Changing the nickname and restarting must preserve the device ID")
         app.tabBars.buttons["自定义"].tap()
         XCTAssertTrue(compact.waitForExistence(timeout: 5))
         XCTAssertEqual(compact.value as? String, changed, "Appearance changes must survive a full app restart")
