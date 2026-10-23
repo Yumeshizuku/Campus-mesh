@@ -70,6 +70,18 @@ jobs:
       - name: Boot iPhone simulator and run personal-use tests
         timeout-minutes: 14
         run: ./scripts/test-ios.sh --skip-build
+      - name: Upload concise UI report and screenshots
+        uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: ios-personal-use-report
+          path: |
+            ios/build/personal-use-summary.json
+            ios/build/personal-use-tests.log
+            ios/build/screenshots/*.png
+            ios/build/screenshots/manifest.json
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:

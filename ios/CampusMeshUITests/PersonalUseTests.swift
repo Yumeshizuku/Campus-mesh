@@ -1,4 +1,5 @@
 import XCTest
+import CoreGraphics
 
 final class PersonalUseTests: XCTestCase {
     func testPersonalUseAndPersistence() throws {
@@ -58,8 +59,14 @@ final class PersonalUseTests: XCTestCase {
         app.tabBars.buttons["自定义"].tap()
         let compact = app.switches["紧凑气泡"]
         XCTAssertTrue(compact.waitForExistence(timeout: 5))
+        reveal(compact, in: app)
         let previous = compact.value as? String
-        compact.tap()
+        // SwiftUI exposes the full labeled row as the switch accessibility frame.
+        // Touch the trailing control, and wait for its accessibility value to update.
+        compact.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        let didChange = NSPredicate { _, _ in (compact.value as? String) != previous }
+        let change = XCTNSPredicateExpectation(predicate: didChange, object: compact)
+        XCTAssertEqual(XCTWaiter.wait(for: [change], timeout: 5), .completed)
         let changed = compact.value as? String
         XCTAssertNotEqual(changed, previous)
         capture("04-自定义")
@@ -76,9 +83,10 @@ final class PersonalUseTests: XCTestCase {
         XCTAssertFalse(app.alerts["Campus Mesh"].exists)
     }
 
+
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<5 {
-            if element.exists && element.isHittable { return }
+            if element.exists && element.isHittable && element.frame.maxY < app.tabBars.firstMatch.frame.minY { return }
             app.swipeUp()
         }
         XCTAssertTrue(element.exists && element.isHittable)
