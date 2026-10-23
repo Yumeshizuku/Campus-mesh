@@ -12,7 +12,7 @@
 | iOS 源码包 | Campus-Mesh-iOS-<版本>-source.zip（历史源码包） |
 | iOS 未签名真机包 | CampusMesh-alpha-0.5.0-unsigned.ipa |
 
-iOS 的 `CFBundleShortVersionString` 保持苹果要求的纯数字 `0.4.0`，`CFBundleVersion` 保持数字构建号；`CMReleaseChannel` 保存 `alpha`，界面和交付包组合显示完整测试版名称。Android `versionName` 直接使用完整测试版名称。两个平台各自维护实际功能版本，不因更改命名而混用版本号。
+iOS 的 `CFBundleShortVersionString` 保持苹果要求的纯数字 `0.5.0`，`CFBundleVersion` 保持数字构建号；`CMReleaseChannel` 保存 `alpha`，界面和交付包组合显示完整测试版名称。Android `versionName` 直接使用完整测试版名称。两个平台各自维护实际功能版本，不因更改命名而混用版本号。
 
 重新发布应用构建时，Android 内部版本号和 iOS 构建号会递增，应用标识保持一致，便于覆盖更新。发布脚本自动从平台配置读取版本名称。旧归档及旧验证记录保留原始名称，作为历史证据。
 

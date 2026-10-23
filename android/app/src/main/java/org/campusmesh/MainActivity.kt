@@ -29,8 +29,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.MultiFormatWriter
 import com.google.zxing.integration.android.IntentIntegrator
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,7 +36,7 @@ import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** UI preferences, drafts and group presets are local. The Rust wire protocol is unchanged. */
+/** Native chat UI; device identities, contacts and managed groups live in the Rust core. */
 class MainActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("mesh", 0) }
     private val ui by lazy { getSharedPreferences("appearance", 0) }
@@ -1243,7 +1241,7 @@ class MainActivity : AppCompatActivity() {
     private fun showQR(title: String, text: String, description: String) {
         runCatching {
                 val size = 720
-                val bits = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
+                val bits = MeshQr.encode(text, size)
                 val pixels =
                     IntArray(size * size) { i ->
                         if (bits[i % size, i / size]) Color.BLACK else Color.WHITE
@@ -1480,7 +1478,7 @@ class MainActivity : AppCompatActivity() {
             if (identity != null) {
                 val json = data.optJSONObject("contact_card")?.toString() ?: identity.toString()
                 val size = 480
-                val bits = MultiFormatWriter().encode(json, BarcodeFormat.QR_CODE, size, size)
+                val bits = MeshQr.encode(json, size)
                 val pixels =
                     IntArray(size * size) { i ->
                         if (bits[i % size, i / size]) Color.BLACK else Color.WHITE
