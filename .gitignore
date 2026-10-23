@@ -17,3 +17,5 @@
 __pycache__/
 *.py[cod]
 /SOURCE_MANIFEST.sha256
+
+/android-delivery/

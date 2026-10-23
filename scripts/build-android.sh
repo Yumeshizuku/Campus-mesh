@@ -11,4 +11,6 @@ command -v cargo-ndk >/dev/null || cargo install cargo-ndk --version 4.1.2 --loc
 # Suppress cargo-ndk's environment dump if its panic hook is triggered.
 CARGO_NDK_NO_PANIC_HOOK=1 cargo ndk -t arm64-v8a --platform 26 -o android/app/src/main/jniLibs build --release --locked -p campus-mesh --lib
 cd android
+# Never package a previous successful APK after a failed/current build.
+rm -rf app/build/outputs/apk/debug
 ./gradlew assembleDebug
