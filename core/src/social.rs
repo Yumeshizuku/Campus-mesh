@@ -162,10 +162,20 @@ impl GroupInvite {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GroupEvent {
-    Snapshot { group: GroupDefinition },
-    Join { invite: GroupInvite },
-    Leave { group_id: String },
-    Sync { group_id: String },
+    Snapshot {
+        group: GroupDefinition,
+    },
+    Join {
+        invite: GroupInvite,
+    },
+    Leave {
+        group_id: String,
+        #[serde(default)]
+        revision: u64,
+    },
+    Sync {
+        group_id: String,
+    },
 }
 
 fn verify(contact: &Contact, data: &[u8], signature: &str) -> Result<()> {
@@ -283,6 +293,16 @@ impl Engine {
     ) -> Result<()> {
         definition.signature = self.sign_bytes(&definition.canonical()?)?;
         definition.validate()?;
+        let admissions = self
+            .group_admissions
+            .entry(definition.id.clone())
+            .or_default();
+        admissions.retain(|id, _| definition.members.contains_key(id));
+        for id in definition.members.keys() {
+            if !previous.contains_key(id) {
+                admissions.insert(id.clone(), definition.revision);
+            }
+        }
         let mut recipients = previous;
         recipients.extend(definition.members.clone());
         recipients.remove(&self.identity.id());
@@ -435,14 +455,10 @@ impl Engine {
         if invite.owner.id() == self.identity.id() {
             return Err("你已经是这个群的群主".into());
         }
-        if self
-            .groups
-            .get(&invite.group_id)
-            .is_some_and(|r| r.joined && !r.definition.dissolved)
+        // A fresh invitation can also repair a stale local membership record.
+        if self.pending_groups.len() >= MAX_GROUPS
+            || (!self.groups.contains_key(&invite.group_id) && self.groups.len() >= MAX_GROUPS)
         {
-            return Err("你已经加入这个群聊".into());
-        }
-        if self.pending_groups.len() >= MAX_GROUPS || self.groups.len() >= MAX_GROUPS {
             return Err("群聊数量已达上限".into());
         }
         if self
@@ -467,6 +483,9 @@ impl Engine {
     }
     pub fn leave_group(&mut self, id: &str, now: u64) -> Result<()> {
         self.transact(|next| {
+            if next.pending_groups.contains_key(id) {
+                return Err("入群申请处理中，请完成同步或等待邀请过期后再退群".into());
+            }
             let record = next.groups.get(id).ok_or("群聊不存在")?.clone();
             if !record.joined || record.definition.dissolved {
                 return Err("已退出这个群聊".into());
@@ -483,6 +502,7 @@ impl Engine {
                     &Payload {
                         group_event: Some(GroupEvent::Leave {
                             group_id: id.into(),
+                            revision: record.definition.revision,
                         }),
                         ..Payload::default()
                     },
@@ -627,7 +647,10 @@ impl Engine {
                     let joined = included
                         && !group.dissolved
                         && (requested || previous.is_none_or(|r| r.joined));
-                    next.pending_groups.remove(&group.id);
+                    // A delayed removal must not erase a newer pending rejoin.
+                    if included || group.dissolved {
+                        next.pending_groups.remove(&group.id);
+                    }
                     next.groups.insert(
                         group.id.clone(),
                         GroupRecord {
@@ -664,7 +687,13 @@ impl Engine {
                     }
                     group.members.insert(sender.id(), sender.clone());
                     group.revision = group.revision.checked_add(1).ok_or("群版本超限")?;
+                    let revision = group.revision;
+                    let group_id = group.id.clone();
                     next.publish_group(group, previous, now)?;
+                    next.group_admissions
+                        .entry(group_id)
+                        .or_default()
+                        .insert(sender.id(), revision);
                     next.group_invites.remove(&invite.nonce);
                 }
                 GroupEvent::Sync { group_id } => {
@@ -689,7 +718,7 @@ impl Engine {
                         now,
                     )?;
                 }
-                GroupEvent::Leave { group_id } => {
+                GroupEvent::Leave { group_id, revision } => {
                     let group = next
                         .groups
                         .get(&group_id)
@@ -704,6 +733,17 @@ impl Engine {
                         || sender.id() == next.identity.id()
                     {
                         return Err("无效的退群申请".into());
+                    }
+                    // Ignore a departure from an earlier membership, even when
+                    // store-carry-forward delivers it after a successful rejoin.
+                    let admitted = next
+                        .group_admissions
+                        .get(&group_id)
+                        .and_then(|m| m.get(&sender.id()))
+                        .copied()
+                        .unwrap_or(0);
+                    if revision < admitted {
+                        return Ok(());
                     }
                     let members: Vec<_> = group
                         .members

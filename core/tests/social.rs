@@ -61,6 +61,7 @@ fn signed_qr_identity_remarks_and_legacy_upgrade() {
         "pending_groups",
         "group_outbox",
         "legacy_groups",
+        "group_admissions",
     ] {
         old.as_object_mut().unwrap().remove(key);
     }
@@ -299,4 +300,91 @@ fn migration_accepts_the_old_longer_group_name_limit() {
         .unwrap();
     assert_eq!(a.groups[&id].definition.name.len(), 96);
     assert_eq!(a.history[0].group.as_deref(), Some(id.as_str()));
+}
+
+#[test]
+fn delayed_leave_does_not_remove_a_member_who_rejoined() {
+    let (mut owner, mut guest, _, id) = setup();
+    guest.leave_group(&id, NOW + 1).unwrap();
+    let old_leave = guest
+        .outgoing(NOW + 1)
+        .into_iter()
+        .find(|f| f.envelope.created == NOW + 1 && f.envelope.recipient == owner.identity.id())
+        .unwrap();
+    let invite = owner.group_invite(&id, NOW + 2).unwrap();
+    guest.join_group(invite, NOW + 2).unwrap();
+    assert!(guest.leave_group(&id, NOW + 2).is_err());
+    let join = guest
+        .outgoing(NOW + 2)
+        .into_iter()
+        .find(|f| f.envelope.created == NOW + 2 && f.envelope.recipient == owner.identity.id())
+        .unwrap();
+    owner.receive(join, NOW + 2).unwrap();
+    let path = std::env::temp_dir().join(format!("mesh-rejoin-{}.json", owner.identity.id()));
+    owner.save(&path).unwrap();
+    owner = Engine::load(&path).unwrap();
+    std::fs::remove_file(path).unwrap();
+    owner.receive(old_leave, NOW + 2).unwrap();
+    assert!(owner.groups[&id]
+        .definition
+        .members
+        .contains_key(&guest.identity.id()));
+    exchange(&mut owner, &mut guest, NOW + 2);
+    assert!(guest.groups[&id].joined);
+}
+
+#[test]
+fn delayed_removal_snapshot_does_not_cancel_a_pending_rejoin() {
+    let (mut owner, mut guest, _, id) = setup();
+    guest.leave_group(&id, NOW + 1).unwrap();
+    let departure = guest
+        .outgoing(NOW + 1)
+        .into_iter()
+        .find(|f| f.envelope.created == NOW + 1 && f.envelope.recipient == owner.identity.id())
+        .unwrap();
+    owner.receive(departure, NOW + 1).unwrap();
+    let removal_frames = owner
+        .outgoing(NOW + 1)
+        .into_iter()
+        .filter(|f| f.envelope.created == NOW + 1)
+        .collect::<Vec<_>>();
+    let invite = owner.group_invite(&id, NOW + 2).unwrap();
+    guest.join_group(invite, NOW + 2).unwrap();
+    let join = guest
+        .outgoing(NOW + 2)
+        .into_iter()
+        .find(|f| f.envelope.created == NOW + 2 && f.envelope.recipient == owner.identity.id())
+        .unwrap();
+    owner.receive(join, NOW + 2).unwrap();
+    for frame in removal_frames {
+        let _ = guest.receive(frame, NOW + 2);
+    }
+    for frame in owner
+        .outgoing(NOW + 2)
+        .into_iter()
+        .filter(|f| f.envelope.created == NOW + 2)
+    {
+        let _ = guest.receive(frame, NOW + 2);
+    }
+    assert!(guest.groups[&id].joined);
+}
+
+#[test]
+fn fresh_invitation_repairs_stale_joined_state() {
+    let (mut owner, mut guest, c, id) = setup();
+    owner
+        .edit_group(&id, "自习小组", &[c.identity.id()], NOW + 1)
+        .unwrap();
+    // Guest was offline and still believes it is joined.
+    assert!(guest.groups[&id].joined);
+    let invite = owner.group_invite(&id, NOW + 2).unwrap();
+    guest.join_group(invite, NOW + 2).unwrap();
+    for _ in 0..4 {
+        exchange(&mut guest, &mut owner, NOW + 2);
+    }
+    assert!(owner.groups[&id]
+        .definition
+        .members
+        .contains_key(&guest.identity.id()));
+    assert!(guest.groups[&id].joined);
 }

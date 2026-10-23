@@ -120,6 +120,8 @@ pub struct Engine {
     group_outbox: BTreeMap<String, GroupDelivery>,
     #[serde(default)]
     legacy_groups: BTreeMap<String, String>,
+    #[serde(default)]
+    group_admissions: BTreeMap<String, BTreeMap<String, u64>>,
 }
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
@@ -186,6 +188,7 @@ impl Engine {
             pending_groups: BTreeMap::new(),
             group_outbox: BTreeMap::new(),
             legacy_groups: BTreeMap::new(),
+            group_admissions: BTreeMap::new(),
         }
     }
     pub fn add_contact(&mut self, c: Contact) -> Result<String> {
