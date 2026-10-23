@@ -58,6 +58,7 @@ final class AppearanceSettings: ObservableObject {
     }
     func draft(_ key:String)->String { defaults.string(forKey:"ui.draft.\(key)") ?? "" }
     func saveDraft(_ text:String,for key:String) { defaults.set(text,forKey:"ui.draft.\(key)") }
+    func reloadFavorites() {favorites=Set(defaults.stringArray(forKey:"ui.favorites") ?? [])}
     func restoreAppearance() { theme="system";accentName="blue";fontSize=16;compact=false;timestamps=true;glassControls=true }
 }
 

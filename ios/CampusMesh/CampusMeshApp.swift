@@ -6,8 +6,8 @@ import UserNotifications
     @StateObject private var appearance = AppearanceSettings()
     @Environment(\.scenePhase) private var phase
     var body: some Scene {
-        WindowGroup { ContentView().environmentObject(mesh).environmentObject(appearance).tint(appearance.accent).preferredColorScheme(appearance.colorScheme).onAppear { mesh.start() }.onChange(of: phase) { value in
-            if value == .active { mesh.start() } else if value == .background { mesh.stop() }
+        WindowGroup { ContentView().environmentObject(mesh).environmentObject(appearance).tint(appearance.accent).preferredColorScheme(appearance.colorScheme).onAppear { mesh.start();appearance.reloadFavorites() }.onChange(of: phase) { value in
+            if value == .active { mesh.start();appearance.reloadFavorites() } else if value == .background { mesh.stop() }
         } }
     }
 }
@@ -89,7 +89,11 @@ import UserNotifications
     var groups:[MeshGroup] {(state["groups"] as? [String:[String:Any]] ?? [:]).values.map(MeshGroup.init).sorted{$0.name<$1.name}}
     var settings:[String:Any] {state["settings"] as? [String:Any] ?? [:]}
     var pendingGroups:Int {(state["pending_groups"] as? [String:Any] ?? [:]).count}
-    func displayName(_ id:String,fallback:String="同学")->String {contacts[id]?["display_name"] as? String ?? fallback}
+    func displayName(_ id:String,fallback:String="同学")->String {
+        if id==deviceID {return identity["nickname"] as? String ?? fallback}
+        if let name=contacts[id]?["display_name"] as? String {return name}
+        return history.last(where:{$0["peer"] as? String==id && $0["incoming"] as? Bool==true})?["sender_name"] as? String ?? fallback
+    }
     func groupName(_ id:String)->String {groups.first{$0.id==id}?.name ?? "旧群聊记录"}
     func addContact(_ text:String) {if call(["op":"scan","text":text]) != nil {refresh()}}
     private func migrateLegacyGroups() {

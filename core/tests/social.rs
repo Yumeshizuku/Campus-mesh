@@ -285,3 +285,18 @@ fn group_member_limit_rejects_the_whole_creation() {
     assert!(owner.create_group("过大群聊", &members, None, NOW).is_err());
     assert_eq!(serde_json::to_value(&owner).unwrap(), before);
 }
+
+#[test]
+fn migration_accepts_the_old_longer_group_name_limit() {
+    let mut a = Engine::new("甲");
+    let b = Engine::new("乙");
+    friend(&mut a, &b);
+    let old = "组".repeat(42);
+    a.send(&b.identity.id(), "旧记录", Some(old.clone()), NOW)
+        .unwrap();
+    let id = a
+        .create_group(&old, &[b.identity.id()], Some(&old), NOW)
+        .unwrap();
+    assert_eq!(a.groups[&id].definition.name.len(), 96);
+    assert_eq!(a.history[0].group.as_deref(), Some(id.as_str()));
+}

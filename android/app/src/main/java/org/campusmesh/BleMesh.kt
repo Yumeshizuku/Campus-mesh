@@ -325,10 +325,14 @@ class BleMesh(private val context: Context) {
                         }
                     }
                     .onFailure { status = "BLE 核心不可用" }
-                val interval = runCatching {
-                    Native.request(JSONObject().put("op", "state")).getJSONObject("data")
-                        .getJSONObject("settings").getLong("sync_interval_secs") * 1000
-                }.getOrDefault(5000L)
+                val interval =
+                    runCatching {
+                            Native.request(JSONObject().put("op", "state"))
+                                .getJSONObject("data")
+                                .getJSONObject("settings")
+                                .getLong("sync_interval_secs") * 1000
+                        }
+                        .getOrDefault(5000L)
                 handler.postDelayed(this, interval)
             }
         }

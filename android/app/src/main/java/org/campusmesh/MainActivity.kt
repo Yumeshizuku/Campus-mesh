@@ -722,10 +722,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun groups(): JSONObject = data.optJSONObject("groups") ?: JSONObject()
+
     private fun groupTitle(id: String) = groups().optJSONObject(id)?.optString("name") ?: "旧群聊记录"
+
     private fun deviceId() = data.optString("device_id")
-    private fun displayName(id: String, fallback: String = "同学") =
-        data.optJSONObject("contacts")?.optJSONObject(id)?.optString("display_name") ?: fallback
+
+    private fun displayName(id: String, fallback: String = "同学"): String {
+        if (id == deviceId())
+            return data.optJSONObject("identity")?.optString("nickname") ?: fallback
+        data.optJSONObject("contacts")?.optJSONObject(id)?.optString("display_name")?.let {
+            return it
+        }
+        val history = data.optJSONArray("history") ?: return fallback
+        for (index in history.length() - 1 downTo 0) {
+            val message = history.getJSONObject(index)
+            if (message.optString("peer") == id && message.optBoolean("incoming"))
+                return message.optString("sender_name", fallback)
+        }
+        return fallback
+    }
 
     private fun groupName() = conversation.removePrefix("group:")
 
@@ -969,7 +984,10 @@ class MainActivity : AppCompatActivity() {
             if (incoming && conversation.startsWith("group:"))
                 bubble.addView(
                     label(
-                        displayName(message.optString("peer"), message.optString("sender_name", "同学")),
+                        displayName(
+                            message.optString("peer"),
+                            message.optString("sender_name", "同学"),
+                        ),
                         12f,
                         true,
                     )
@@ -986,7 +1004,10 @@ class MainActivity : AppCompatActivity() {
                     "delivered" -> "已送达"
                     "partially_delivered" -> {
                         val delivery = message.optJSONObject("delivery") ?: JSONObject()
-                        val delivered = delivery.keys().asSequence().count { delivery.optString(it) == "delivered" }
+                        val delivered =
+                            delivery.keys().asSequence().count {
+                                delivery.optString(it) == "delivered"
+                            }
                         "已送达 $delivered/${delivery.length()}"
                     }
                     "received" -> "已收到"
@@ -1033,12 +1054,19 @@ class MainActivity : AppCompatActivity() {
     private fun send() {
         val text = composer?.text?.toString() ?: return
         if (text.isBlank() || conversation.isBlank()) return
-        if (text.toByteArray(Charsets.UTF_8).size > 8192) { notice("消息过长，请控制在 8192 字节以内"); return }
-        val group = conversation.startsWith("group:")
-        val result = request(if (group) "group_send" else "send") {
-            it.put(if (group) "id" else "to", if (group) groupName() else conversation.removePrefix("peer:"))
-                .put("text", text)
+        if (text.toByteArray(Charsets.UTF_8).size > 8192) {
+            notice("消息过长，请控制在 8192 字节以内")
+            return
         }
+        val group = conversation.startsWith("group:")
+        val result =
+            request(if (group) "group_send" else "send") {
+                it.put(
+                        if (group) "id" else "to",
+                        if (group) groupName() else conversation.removePrefix("peer:"),
+                    )
+                    .put("text", text)
+            }
         if (result != null) composer?.setText("")
         refreshState()
     }
@@ -1046,126 +1074,277 @@ class MainActivity : AppCompatActivity() {
     private fun editGroup(existing: String? = null) {
         val record = groups().optJSONObject(existing ?: "")
         val oldMembers = record?.optJSONObject("members") ?: JSONObject()
-        val known = (contacts() + oldMembers.keys().asSequence().map { it to oldMembers.getJSONObject(it).optString("nickname", "同学") }.toList())
-            .distinctBy { it.first }.filter { it.first != deviceId() }
+        val known =
+            (contacts() +
+                    oldMembers
+                        .keys()
+                        .asSequence()
+                        .map { it to oldMembers.getJSONObject(it).optString("nickname", "同学") }
+                        .toList())
+                .distinctBy { it.first }
+                .filter { it.first != deviceId() }
         val name = input("例如：自习小组").apply { setText(record?.optString("name") ?: "") }
-        AlertDialog.Builder(this).setTitle(if (existing == null) "创建群聊" else "修改群聊")
+        AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "创建群聊" else "修改群聊")
             .setMessage("群主可管理成员，最多 32 人。可以先建群，再通过邀请二维码添加成员。")
-            .setView(name).setPositiveButton("选择成员") { _, _ ->
+            .setView(name)
+            .setPositiveButton("选择成员") { _, _ ->
                 val title = name.text.toString().trim()
                 if (title.isBlank() || title.toByteArray(Charsets.UTF_8).size > 96) {
-                    notice("名称不能为空，且最多 96 字节"); return@setPositiveButton
+                    notice("名称不能为空，且最多 96 字节")
+                    return@setPositiveButton
                 }
                 val selected = BooleanArray(known.size) { oldMembers.has(known[it].first) }
-                AlertDialog.Builder(this).setTitle("邀请好友或保留已有成员")
-                    .setMultiChoiceItems(known.map { it.second }.toTypedArray(), selected) { _, i, checked -> selected[i] = checked }
+                AlertDialog.Builder(this)
+                    .setTitle("邀请好友或保留已有成员")
+                    .setMultiChoiceItems(known.map { it.second }.toTypedArray(), selected) {
+                        _,
+                        i,
+                        checked ->
+                        selected[i] = checked
+                    }
                     .setPositiveButton("保存") { _, _ ->
                         val chosen = known.filterIndexed { i, _ -> selected[i] }.map { it.first }
-                        val result = request(if (existing == null) "group_create" else "group_edit") {
-                            it.put("name", title).put("members", JSONArray(chosen))
-                            if (existing != null) it.put("id", existing)
+                        val result =
+                            request(if (existing == null) "group_create" else "group_edit") {
+                                it.put("name", title).put("members", JSONArray(chosen))
+                                if (existing != null) it.put("id", existing)
+                            }
+                        if (result != null) {
+                            refreshState()
+                            selectConversation("group:" + (existing ?: result.getString("id")))
                         }
-                        if (result != null) { refreshState(); selectConversation("group:" + (existing ?: result.getString("id"))) }
-                    }.setNegativeButton("取消", null).show()
-            }.setNegativeButton("取消", null).show()
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun conversationActions() {
-        if (conversation.isBlank()) { chooseConversation(); return }
+        if (conversation.isBlank()) {
+            chooseConversation()
+            return
+        }
         if (conversation.startsWith("group:")) {
             val id = groupName()
             val group = groups().optJSONObject(id)
             val members = group?.optJSONObject("members") ?: JSONObject()
-            val owner = group?.optJSONObject("owner")?.optString("sign") == data.optJSONObject("identity")?.optString("sign")
+            val owner =
+                group?.optJSONObject("owner")?.optString("sign") ==
+                    data.optJSONObject("identity")?.optString("sign")
             val active = group?.optBoolean("joined") == true && !group.optBoolean("dissolved")
             val options = mutableListOf("查看成员与群 ID")
             if (active && !owner) options.add("同步群信息")
             if (active && owner) options.addAll(listOf("修改群名和成员", "生成入群二维码"))
             if (active) options.add(if (owner) "解散群聊" else "退出群聊")
-            AlertDialog.Builder(this).setTitle(conversationTitle()).setItems(options.toTypedArray()) { _, index ->
-                when (options[index]) {
-                    "查看成员与群 ID" -> AlertDialog.Builder(this).setTitle(groupTitle(id))
-                        .setMessage("群 ID：$id\n\n" + members.keys().asSequence().joinToString("\n\n") {
-                            displayName(it, members.getJSONObject(it).optString("nickname")) + "\n" + it
-                        } + "\n\n成员变更在 Mesh 同步后生效，聊天记录保存在各自设备。")
-                        .setPositiveButton("完成", null).show()
-                    "修改群名和成员" -> editGroup(id)
-                    "同步群信息" -> if(request("group_sync") {it.put("id",id)} != null) notice("群信息同步请求已加入 Mesh 待传队列")
-                    "生成入群二维码" -> request("group_invite") { it.put("id", id) }?.let {
-                        showQR("邀请入群", it.toString(), "10 分钟内有效，仅可使用一次。重新生成会撤销上一个邀请；扫码后需在有效期内与群主通过 Mesh 同步。")
+            AlertDialog.Builder(this)
+                .setTitle(conversationTitle())
+                .setItems(options.toTypedArray()) { _, index ->
+                    when (options[index]) {
+                        "查看成员与群 ID" ->
+                            AlertDialog.Builder(this)
+                                .setTitle(groupTitle(id))
+                                .setMessage(
+                                    "群 ID：$id\n\n" +
+                                        members.keys().asSequence().joinToString("\n\n") {
+                                            displayName(
+                                                it,
+                                                members.getJSONObject(it).optString("nickname"),
+                                            ) + "\n" + it
+                                        } +
+                                        "\n\n成员变更在 Mesh 同步后生效，聊天记录保存在各自设备。"
+                                )
+                                .setPositiveButton("完成", null)
+                                .show()
+                        "修改群名和成员" -> editGroup(id)
+                        "同步群信息" ->
+                            if (request("group_sync") { it.put("id", id) } != null)
+                                notice("群信息同步请求已加入 Mesh 待传队列")
+                        "生成入群二维码" ->
+                            request("group_invite") { it.put("id", id) }
+                                ?.let {
+                                    showQR(
+                                        "邀请入群",
+                                        it.toString(),
+                                        "10 分钟内有效，仅可使用一次。重新生成会撤销上一个邀请；扫码后需在有效期内与群主通过 Mesh 同步。",
+                                    )
+                                }
+                        else ->
+                            AlertDialog.Builder(this)
+                                .setTitle(options[index] + "？")
+                                .setMessage("保留本机聊天记录，变更将通过 Mesh 同步。")
+                                .setPositiveButton("确认") { _, _ ->
+                                    if (request("group_leave") { it.put("id", id) } != null) {
+                                        refreshState()
+                                        show("chat")
+                                    }
+                                }
+                                .setNegativeButton("取消", null)
+                                .show()
                     }
-                    else -> AlertDialog.Builder(this).setTitle(options[index] + "？")
-                        .setMessage("保留本机聊天记录，变更将通过 Mesh 同步。")
-                        .setPositiveButton("确认") { _, _ -> if (request("group_leave") {it.put("id", id)} != null) {refreshState();show("chat")} }
-                        .setNegativeButton("取消", null).show()
                 }
-            }.setNegativeButton("取消", null).show()
+                .setNegativeButton("取消", null)
+                .show()
         } else {
             val id = conversation.removePrefix("peer:")
             val pins = (ui.getStringSet("pins", emptySet()) ?: emptySet()).toMutableSet()
-            AlertDialog.Builder(this).setTitle(conversationTitle())
-                .setItems(arrayOf(if (pins.contains(id)) "取消常用好友" else "设为常用好友", "设置好友备注", "查看已记住的设备")) { _, index ->
-                    when(index) {
-                        0 -> { if (!pins.add(id)) pins.remove(id); ui.edit().putStringSet("pins", pins).apply(); notice("常用好友排序已更新") }
+            AlertDialog.Builder(this)
+                .setTitle(conversationTitle())
+                .setItems(
+                    arrayOf(if (pins.contains(id)) "取消常用好友" else "设为常用好友", "设置好友备注", "查看已记住的设备")
+                ) { _, index ->
+                    when (index) {
+                        0 -> {
+                            if (!pins.add(id)) pins.remove(id)
+                            ui.edit().putStringSet("pins", pins).apply()
+                            notice("常用好友排序已更新")
+                        }
                         1 -> editRemark(id)
-                        else -> AlertDialog.Builder(this).setTitle("已记住的好友设备")
-                            .setMessage("昵称：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("nickname")}\n\n设备 ID：$id\n\n签名公钥：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("sign")}")
-                            .setPositiveButton("完成", null).show()
+                        else ->
+                            AlertDialog.Builder(this)
+                                .setTitle("已记住的好友设备")
+                                .setMessage(
+                                    "昵称：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("nickname")}\n\n设备 ID：$id\n\n签名公钥：${data.optJSONObject("contacts")?.optJSONObject(id)?.optString("sign")}"
+                                )
+                                .setPositiveButton("完成", null)
+                                .show()
                     }
-                }.show()
+                }
+                .show()
         }
     }
 
     private fun editRemark(id: String) {
-        val field = input("仅自己可见，留空后显示昵称").apply {setText(data.optJSONObject("contacts")?.optJSONObject(id)?.optString("remark") ?: "")}
-        AlertDialog.Builder(this).setTitle("好友备注").setView(field)
-            .setPositiveButton("保存") {_, _ -> if (request("friend_remark") {it.put("id", id).put("remark", field.text.toString())} != null) {refreshState();show(screen)} }
-            .setNegativeButton("取消", null).show()
+        val field =
+            input("仅自己可见，留空后显示昵称").apply {
+                setText(
+                    data.optJSONObject("contacts")?.optJSONObject(id)?.optString("remark") ?: ""
+                )
+            }
+        AlertDialog.Builder(this)
+            .setTitle("好友备注")
+            .setView(field)
+            .setPositiveButton("保存") { _, _ ->
+                if (
+                    request("friend_remark") {
+                        it.put("id", id).put("remark", field.text.toString())
+                    } != null
+                ) {
+                    refreshState()
+                    show(screen)
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun showQR(title: String, text: String, description: String) {
         runCatching {
-            val size = 720
-            val bits = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
-            val pixels = IntArray(size * size) {i -> if (bits[i % size, i / size]) Color.BLACK else Color.WHITE}
-            val content = column().apply {
-                addView(ImageView(this@MainActivity).apply {
-                    setImageBitmap(Bitmap.createBitmap(pixels, size, size, Bitmap.Config.ARGB_8888))
-                    setBackgroundColor(Color.WHITE);adjustViewBounds=true;contentDescription=title
-                }, LinearLayout.LayoutParams(-1, dp(300)))
-                addView(label(description, 13f, true))
+                val size = 720
+                val bits = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
+                val pixels =
+                    IntArray(size * size) { i ->
+                        if (bits[i % size, i / size]) Color.BLACK else Color.WHITE
+                    }
+                val content =
+                    column().apply {
+                        addView(
+                            ImageView(this@MainActivity).apply {
+                                setImageBitmap(
+                                    Bitmap.createBitmap(pixels, size, size, Bitmap.Config.ARGB_8888)
+                                )
+                                setBackgroundColor(Color.WHITE)
+                                adjustViewBounds = true
+                                contentDescription = title
+                            },
+                            LinearLayout.LayoutParams(-1, dp(300)),
+                        )
+                        addView(label(description, 13f, true))
+                    }
+                AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setView(content)
+                    .setPositiveButton("完成", null)
+                    .setNeutralButton("分享文本") { _, _ ->
+                        startActivity(
+                            Intent.createChooser(
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                },
+                                title,
+                            )
+                        )
+                    }
+                    .show()
             }
-            AlertDialog.Builder(this).setTitle(title).setView(content).setPositiveButton("完成", null)
-                .setNeutralButton("分享文本") { _, _ -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,text)},title)) }.show()
-        }.onFailure {notice("二维码生成失败，请重新生成邀请")}
+            .onFailure { notice("二维码生成失败，请重新生成邀请") }
     }
 
     private fun meshSettings() {
         val settings = data.optJSONObject("settings") ?: return
-        val fields = listOf(Triple("hop_limit", "最大跳数", "1–8"),Triple("message_ttl_secs", "消息有效期（秒）", "60–86400"),
-            Triple("sync_interval_secs", "同步间隔（秒）", "1–60"),Triple("batch_size", "TCP 每批封装数", "1–24"),
-            Triple("max_peers", "TCP 邻居上限", "1–300"),Triple("cache_capacity", "待传封装上限", "64–4096"))
-        val editors = fields.associate { (key, title, range) -> key to input("$title · $range").apply {
-            inputType=android.text.InputType.TYPE_CLASS_NUMBER;setText(settings.optInt(key).toString())
-        } }
-        val form = column().apply {
-            addView(label("跳数和有效期用于新消息。同步间隔影响 TCP 和蓝牙；批量和邻居上限用于 TCP。蓝牙仍每轮发送一个封装，每侧最多 4 条连接。",13f,true))
-            fields.forEach {(key,title,range) -> addView(label("$title（$range）",13f,true));addView(editors.getValue(key))}
-        }
-        val dialog = AlertDialog.Builder(this).setTitle("Mesh 详细参数").setView(ScrollView(this).apply {addView(form)})
-            .setPositiveButton("保存",null).setNeutralButton("默认值",null).setNegativeButton("取消",null).create()
+        val fields =
+            listOf(
+                Triple("hop_limit", "最大跳数", "1–8"),
+                Triple("message_ttl_secs", "消息有效期（秒）", "60–86400"),
+                Triple("sync_interval_secs", "同步间隔（秒）", "1–60"),
+                Triple("batch_size", "TCP 每批封装数", "1–24"),
+                Triple("max_peers", "TCP 邻居上限", "1–300"),
+                Triple("cache_capacity", "待传封装上限", "64–4096"),
+            )
+        val editors =
+            fields.associate { (key, title, range) ->
+                key to
+                    input("$title · $range").apply {
+                        inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                        setText(settings.optInt(key).toString())
+                    }
+            }
+        val form =
+            column().apply {
+                addView(
+                    label(
+                        "跳数和有效期用于新消息。同步间隔影响 TCP 和蓝牙；批量和邻居上限用于 TCP。蓝牙仍每轮发送一个封装，每侧最多 4 条连接。",
+                        13f,
+                        true,
+                    )
+                )
+                fields.forEach { (key, title, range) ->
+                    addView(label("$title（$range）", 13f, true))
+                    addView(editors.getValue(key))
+                }
+            }
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle("Mesh 详细参数")
+                .setView(ScrollView(this).apply { addView(form) })
+                .setPositiveButton("保存", null)
+                .setNeutralButton("默认值", null)
+                .setNegativeButton("取消", null)
+                .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val values = JSONObject()
-                for ((key,_,_) in fields) {
+                for ((key, _, _) in fields) {
                     val value = editors.getValue(key).text.toString().toLongOrNull()
-                    if(value==null) {notice("请输入有效整数");return@setOnClickListener}
-                    values.put(key,value)
+                    if (value == null) {
+                        notice("请输入有效整数")
+                        return@setOnClickListener
+                    }
+                    values.put(key, value)
                 }
-                if(request("settings") {it.put("settings",values)} != null) {refreshState();dialog.dismiss();notice("Mesh 参数已保存")}
+                if (request("settings") { it.put("settings", values) } != null) {
+                    refreshState()
+                    dialog.dismiss()
+                    notice("Mesh 参数已保存")
+                }
             }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                listOf(8,86400,5,24,300,4096).forEachIndexed {i,value -> editors.getValue(fields[i].first).setText(value.toString())}
+                listOf(8, 86400, 5, 24, 300, 4096).forEachIndexed { i, value ->
+                    editors.getValue(fields[i].first).setText(value.toString())
+                }
             }
         }
         dialog.show()
@@ -1275,20 +1454,23 @@ class MainActivity : AppCompatActivity() {
             addView(button("断开 Wi-Fi Direct") { radio("P2P_OFF") })
         }
         card("Mesh 多跳", "新消息可经多个设备传递。设备 ID 与好友记录保存在本机，修改昵称不会改变身份。") {
-            addView(button("详细传输参数") {meshSettings()})
+            addView(button("详细传输参数") { meshSettings() })
             val pending = data.optJSONObject("pending_groups")?.length() ?: 0
-            if (pending>0) addView(label("$pending 个入群申请等待与群主同步，10 分钟内有效。",13f,true))
+            if (pending > 0) addView(label("$pending 个入群申请等待与群主同步，10 分钟内有效。", 13f, true))
         }
         card("已记住的好友", "点击设置本机备注。重新打开应用后无需重复添加。") {
-            contacts().forEach {(id,name) -> addView(button("$name · ${id.take(12)}…") {editRemark(id)})}
+            contacts().forEach { (id, name) ->
+                addView(button("$name · ${id.take(12)}…") { editRemark(id) })
+            }
         }
         card("连接小提示", "校园 Wi-Fi 若隔离设备，请使用自己的热点或蓝牙。蓝牙和 Wi-Fi Direct 仍需真机兼容性验证。") {}
     }
 
     private fun addContact(raw: String) {
-        val result = request("scan") {it.put("text",raw)} ?: return
+        val result = request("scan") { it.put("text", raw) } ?: return
         refreshState()
-        if(result.optString("kind")=="friend") selectConversation("peer:"+result.getString("id"))
+        if (result.optString("kind") == "friend")
+            selectConversation("peer:" + result.getString("id"))
         else notice("入群申请已提交，等待与群主完成 Mesh 同步。邀请 10 分钟内有效。")
     }
 
@@ -1316,7 +1498,12 @@ class MainActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams(-1, dp(260)),
                 )
                 addView(
-                    label("本机设备 ID：" + deviceId() + "\n\n签名公钥：" + identity.optString("sign"), 12f, true).apply { setTextIsSelectable(true) }
+                    label(
+                            "本机设备 ID：" + deviceId() + "\n\n签名公钥：" + identity.optString("sign"),
+                            12f,
+                            true,
+                        )
+                        .apply { setTextIsSelectable(true) }
                 )
                 addView(
                     button("分享公钥") {
@@ -1575,22 +1762,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun migrateLegacyGroups() {
-        val old=runCatching {JSONObject(ui.getString("groups","{}")!!)}.getOrDefault(JSONObject())
+        val old =
+            runCatching { JSONObject(ui.getString("groups", "{}")!!) }.getOrDefault(JSONObject())
         for (name in old.keys().asSequence().toList()) {
-            val result=request("group_migrate") {it.put("name",name).put("members",old.getJSONArray(name))} ?: continue
-            val oldKey="group:$name"
-            val newKey="group:"+result.getString("id")
-            val editor=ui.edit()
-            ui.getString("draft:$oldKey",null)?.let {editor.putString("draft:$newKey",it)}
-            val retry=runCatching {JSONObject(ui.getString("retry:$oldKey","{}")!!)}.getOrDefault(JSONObject())
-            if(!ui.contains("draft:$newKey") && retry.has("text")) editor.putString("draft:$newKey",retry.getString("text"))
+            val result =
+                request("group_migrate") {
+                    it.put("name", name).put("members", old.getJSONArray(name))
+                } ?: continue
+            val oldKey = "group:$name"
+            val newKey = "group:" + result.getString("id")
+            val editor = ui.edit()
+            ui.getString("draft:$oldKey", null)?.let { editor.putString("draft:$newKey", it) }
+            val retry =
+                runCatching { JSONObject(ui.getString("retry:$oldKey", "{}")!!) }
+                    .getOrDefault(JSONObject())
+            if (!ui.contains("draft:$newKey") && !ui.contains("draft:$oldKey") && retry.has("text"))
+                editor.putString("draft:$newKey", retry.getString("text"))
             editor.remove("draft:$oldKey").remove("retry:$oldKey")
-            if(conversation==oldKey) {conversation=newKey;editor.putString("conversation",newKey)}
+            if (conversation == oldKey) {
+                conversation = newKey
+                editor.putString("conversation", newKey)
+            }
             old.remove(name)
-            editor.putString("groups",old.toString()).apply()
+            editor.putString("groups", old.toString()).apply()
         }
-        if(old.length()==0) ui.edit().remove("groups").apply()
-        data=runCatching {Native.request(JSONObject().put("op","state")).getJSONObject("data")}.getOrDefault(data)
+        if (old.length() == 0) ui.edit().remove("groups").apply()
+        data =
+            runCatching { Native.request(JSONObject().put("op", "state")).getJSONObject("data") }
+                .getOrDefault(data)
     }
 
     override fun onRequestPermissionsResult(

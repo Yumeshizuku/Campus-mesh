@@ -112,6 +112,7 @@ struct MeshSettingsView:View {
                 if saved {Text("参数已保存到本机").foregroundStyle(.secondary)}
             }
         }.navigationTitle("Mesh 详细参数").onAppear {load(mesh.settings)}
+        .toolbar {ToolbarItemGroup(placement:.keyboard) {Spacer();Button("收起键盘") {UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),to:nil,from:nil,for:nil)}}}
     }
     private func load(_ settings:[String:Any]) {for (key,_,_) in fields {values[key]=(settings[key] as? NSNumber)?.stringValue ?? ""}}
 }

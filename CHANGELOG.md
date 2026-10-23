@@ -1,6 +1,18 @@
 # 更新日志
 
-这里记录 Campus Mesh 从界面调整到构建、安装和验证的主要变化。当前 Android 测试版为 **alpha-0.3.0**，iOS 测试版为 **alpha-0.4.0**。安装文件和对应说明可以在 [Android 发布页](https://github.com/Yumeshizuku/Campus-mesh/releases/tag/alpha-0.3.0)与 [iOS 发布页](https://github.com/Yumeshizuku/Campus-mesh/releases/tag/alpha-0.4.0)找到。
+这里记录 Campus Mesh 从界面调整到构建、安装和验证的主要变化。本轮 Android 与 iOS 源码统一升级为 **alpha-0.5.0**。此前发布的安装包仍保留在 [Android alpha-0.3.0 发布页](https://github.com/Yumeshizuku/Campus-mesh/releases/tag/alpha-0.3.0)和 [iOS alpha-0.4.0 发布页](https://github.com/Yumeshizuku/Campus-mesh/releases/tag/alpha-0.4.0)。
+
+## alpha-0.5.0 · 扫码好友与 Mesh 群聊 · 2026-10-23
+
+现在可以互扫带签名的二维码添加好友，并在身份页查看本机设备 ID。设备身份、好友和备注会保存在本机，重启或修改昵称后不需要重新认识对方。好友会话增加了备注和设备信息，收到对方的新昵称后也会保留自己的备注。旧版公钥二维码仍可使用。
+
+附近页面新增详细 Mesh 参数，可以调整消息最多经过多少跳、保存多久、多久同步一次，以及 TCP 的批量、邻居和待传缓存上限。参数会实际作用于通信核心和原生蓝牙调度，已有消息不会因为改参数而被重新生成。
+
+常用群发升级为有固定 ID 和共享成员名单的群聊。群主可以改群名、管理最多 32 位成员、分享一次性入群二维码或解散群聊，成员可以查看名单和退群。群邀请 10 分钟内有效，扫码后等待与群主完成 Mesh 同步；群成员之间不需要逐一互加好友。发送一条群消息只显示一个气泡，并汇总各人的送达回执。长时间离线后还可以请求同步最新群信息。
+
+原本只在自己手机上保存的群发组合与逐成员提交重试入口已经移除。升级会保留身份和聊天记录，将已保存的旧组合、相关记录和草稿迁移到新群 ID；迁移失败时保留原数据，旧消息不会被自动重发。群名和成员变更也需要通过 Mesh 送达，无法立即通知离线设备；新成员不会自动收到历史消息。
+
+Android 和 iOS 都继续沿用已有的聊天布局、自定义外观与草稿，iOS 保留 Liquid Glass。具体使用方式见[好友与群聊说明](docs/FRIENDS-GROUPS.md)，测试记录见[验证报告](docs/VERIFICATION.md)。
 
 ## iPhone 个人安装与操作验证 · 2026-10-23
 

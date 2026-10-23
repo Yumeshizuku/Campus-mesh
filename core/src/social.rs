@@ -331,10 +331,16 @@ impl Engine {
                 );
             }
             let id = format!("{}:{}", next.identity.id(), hex::encode(random::<16>()));
+            let mut display_name = name.trim().to_string();
+            if legacy_name.is_some() {
+                while display_name.len() > 96 {
+                    display_name.pop();
+                }
+            }
             next.publish_group(
                 GroupDefinition {
                     id: id.clone(),
-                    name: name.trim().into(),
+                    name: display_name,
                     owner: next.identity.clone(),
                     revision: 1,
                     members: selected,
