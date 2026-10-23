@@ -102,12 +102,15 @@ final class PersonalUseTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Mesh 详细参数"].waitForExistence(timeout:10))
         let hops=app.textFields["最大跳数"]
         XCTAssertTrue(hops.exists)
-        hops.tap()
+        // Tap beyond the trailing digit in this right-aligned numeric field.
+        hops.coordinate(withNormalizedOffset:CGVector(dx:0.98,dy:0.5)).tap()
         let current=hops.value as? String ?? ""
         hops.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:current.count)+"4")
+        XCTAssertEqual(hops.value as? String,"4")
         app.buttons["收起键盘"].tap()
         let save=app.buttons["保存 Mesh 参数"]
         reveal(save,in:app);save.tap()
+        XCTAssertFalse(app.alerts["Campus Mesh"].exists,app.alerts["Campus Mesh"].debugDescription)
         XCTAssertTrue(app.staticTexts["参数已保存到本机"].waitForExistence(timeout:5))
         capture("05-Mesh参数")
         app.tabBars.buttons["聊天"].tap()
@@ -156,6 +159,14 @@ final class PersonalUseTests: XCTestCase {
         app.terminate();app.launch();app.tabBars.buttons["聊天"].tap()
         XCTAssertTrue(app.staticTexts["实验搭档"].waitForExistence(timeout:10),"Friend remarks must survive restart")
         capture("07-好友备注")
+    }
+
+    override func tearDownWithError() throws {
+        if (testRun?.failureCount ?? 0)>0 {
+            capture("失败现场-"+name)
+            print(XCUIApplication().debugDescription)
+        }
+        try super.tearDownWithError()
     }
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {

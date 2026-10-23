@@ -109,9 +109,9 @@ struct MeshSettingsView:View {
                     if mesh.call(["op":"settings","settings":settings]) != nil {mesh.refresh();saved=true}
                 }.disabled(!mesh.isRunning)
                 Button("恢复默认参数") {load(["hop_limit":8,"message_ttl_secs":86400,"sync_interval_secs":5,"batch_size":24,"max_peers":300,"cache_capacity":4096]);saved=false}
-                if saved {Text("参数已保存到本机").foregroundStyle(.secondary)}
             }
         }.navigationTitle("Mesh 详细参数").onAppear {load(mesh.settings)}
+        .safeAreaInset(edge:.top) {if saved {Text("参数已保存到本机").font(.caption).frame(maxWidth:.infinity).padding(8).background(.thinMaterial)}}
         .toolbar {ToolbarItemGroup(placement:.keyboard) {Spacer();Button("收起键盘") {UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),to:nil,from:nil,for:nil)}}}
     }
     private func load(_ settings:[String:Any]) {for (key,_,_) in fields {values[key]=(settings[key] as? NSNumber)?.stringValue ?? ""}}
