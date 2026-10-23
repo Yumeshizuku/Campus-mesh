@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+prepare_tests=true
+run_tests=true
 if (( $# == 0 )); then
   ./scripts/build-ios.sh --simulator
-elif (( $# != 1 )) || [[ "$1" != --skip-build ]]; then
-  echo 'Usage: scripts/test-ios.sh [--skip-build]' >&2
+elif (( $# == 1 )) && [[ "$1" == --skip-build ]]; then
+  prepare_tests=false
+elif (( $# == 1 )) && [[ "$1" == --build-tests ]]; then
+  run_tests=false
+else
+  echo 'Usage: scripts/test-ios.sh [--build-tests|--skip-build]' >&2
   exit 2
 fi
 build_root="$PWD/ios/build"
@@ -31,6 +37,16 @@ print(max(candidates)[2])
 PY
 )
 printf 'Testing on iPhone simulator %s\n' "$simulator_id"
+# Build the test harness while the simulator is stopped. Compiling XCTest/SwiftUI
+# while a fresh simulator initializes can exhaust hosted-runner CPU and memory.
+if [[ "$prepare_tests" == true ]]; then
+  xcodebuild -project ios/CampusMesh.xcodeproj -scheme CampusMesh \
+    -sdk iphonesimulator -configuration Debug \
+    -destination "platform=iOS Simulator,id=$simulator_id" \
+    -derivedDataPath "$build_root/Simulator" ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES \
+    CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee "$build_root/prepare-tests.log"
+fi
+if [[ "$run_tests" != true ]]; then exit 0; fi
 python3 - "$simulator_id" "$build_root/simulators.json" <<'PY'
 import json, subprocess, sys
 device_id = sys.argv[1]
@@ -60,4 +76,4 @@ xcodebuild -project ios/CampusMesh.xcodeproj -scheme CampusMesh \
   -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
   -maximum-test-execution-time-allowance 300 \
-  CODE_SIGNING_ALLOWED=NO test 2>&1 | tee "$build_root/personal-use-tests.log"
+  CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee "$build_root/personal-use-tests.log"
