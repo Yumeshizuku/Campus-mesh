@@ -35,7 +35,11 @@ impl Router {
         self.links.insert(
             link.into(),
             Link {
-                rssi: rssi.clamp(-127, -1),
+                rssi: if (-127..=-1).contains(&rssi) {
+                    rssi
+                } else {
+                    -80
+                },
                 seen: now,
             },
         );

@@ -191,3 +191,24 @@ fn group_read_is_bound_to_recipient_and_ack_cannot_downgrade_it() {
     assert_eq!(msg.status, "read");
     assert!(msg.delivery.values().all(|s| s == "read"));
 }
+
+#[test]
+fn unavailable_rssi_does_not_become_the_strongest_route() {
+    let (mut a, mut b) = pair();
+    b.send(&a.identity.id(), "probe", None, 100).unwrap();
+    let f = b.outgoing(100).remove(0);
+    for (link, rssi) in [("strong", -50), ("medium", -60), ("unknown", 127)] {
+        a.receive_on_link(link, rssi, f.clone(), 101).unwrap();
+    }
+    let id = a.send(&b.identity.id(), "reply", None, 102).unwrap();
+    assert!(!a
+        .outgoing_on_link("unknown", 127, 102, 24)
+        .unwrap()
+        .iter()
+        .any(|f| f.envelope.id == id));
+    assert!(a
+        .outgoing_on_link("medium", -60, 102, 24)
+        .unwrap()
+        .iter()
+        .any(|f| f.envelope.id == id));
+}

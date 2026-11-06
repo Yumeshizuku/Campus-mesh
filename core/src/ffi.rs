@@ -156,7 +156,10 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
                 let accepted = if let Some(link) = v["link"].as_str() {
                     e.receive_on_link(
                         link,
-                        v["rssi"].as_i64().unwrap_or(-80).clamp(-127, -1) as i16,
+                        v["rssi"]
+                            .as_i64()
+                            .filter(|r| (-127..=-1).contains(r))
+                            .unwrap_or(-80) as i16,
                         frame,
                         network::now(),
                     )?
@@ -168,7 +171,10 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
             "outgoing_ble" => {
                 let frames = e.outgoing_on_link(
                     v["link"].as_str().ok_or("missing link")?,
-                    v["rssi"].as_i64().unwrap_or(-80).clamp(-127, -1) as i16,
+                    v["rssi"]
+                        .as_i64()
+                        .filter(|r| (-127..=-1).contains(r))
+                        .unwrap_or(-80) as i16,
                     network::now(),
                     v["limit"].as_u64().unwrap_or(1).clamp(1, 24) as usize,
                 )?;
