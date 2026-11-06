@@ -66,9 +66,12 @@ final class PersonalUseTests: XCTestCase {
         XCTAssertTrue(compact.waitForExistence(timeout: 5))
         reveal(compact, in: app)
         let previous = compact.value as? String
-        // SwiftUI exposes the full labeled row as the switch accessibility frame.
-        // Touch the trailing control, and wait for its accessibility value to update.
-        compact.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        // SwiftUI exposes the labeled row as an outer switch and UIKit's actual
+        // control as a nested switch. Tap the control itself; a coordinate based
+        // on the full row can miss the thumb on Liquid Glass layouts.
+        let compactControl = compact.descendants(matching: .switch).firstMatch
+        XCTAssertTrue(compactControl.exists, compact.debugDescription)
+        compactControl.tap()
         let didChange = NSPredicate { _, _ in (compact.value as? String) != previous }
         let change = XCTNSPredicateExpectation(predicate: didChange, object: compact)
         XCTAssertEqual(XCTWaiter.wait(for: [change], timeout: 5), .completed)
