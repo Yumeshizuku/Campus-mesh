@@ -1,4 +1,4 @@
-//! Campus Mesh v1: authenticated encrypted envelopes and bounded DTN flooding.
+//! Authenticated E2EE envelopes, bounded DTN forwarding and opportunistic BLE routes.
 use chacha20poly1305::{
     aead::{Aead, KeyInit},
     XChaCha20Poly1305, XNonce,
@@ -16,7 +16,9 @@ use std::{
 use x25519_dalek::{PublicKey, StaticSecret};
 pub mod ffi;
 pub mod network;
+pub mod routing;
 pub mod social;
+pub mod wire;
 pub use social::*;
 pub type Result<T> = std::result::Result<T, String>;
 pub const MAX_FRAME: usize = 65536;
@@ -70,6 +72,8 @@ pub struct Frame {
 struct Payload {
     text: Option<String>,
     ack: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    read: Option<String>,
     group: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     group_revision: Option<u64>,
@@ -122,6 +126,8 @@ pub struct Engine {
     legacy_groups: BTreeMap<String, String>,
     #[serde(default)]
     group_admissions: BTreeMap<String, BTreeMap<String, u64>>,
+    #[serde(skip)]
+    pub routing: routing::Router,
 }
 fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
@@ -189,6 +195,7 @@ impl Engine {
             group_outbox: BTreeMap::new(),
             legacy_groups: BTreeMap::new(),
             group_admissions: BTreeMap::new(),
+            routing: routing::Router::default(),
         }
     }
     pub fn add_contact(&mut self, c: Contact) -> Result<String> {
@@ -241,7 +248,7 @@ impl Engine {
     }
     fn seal(&self, to: &Contact, payload: &Payload, now: u64) -> Result<Frame> {
         let ephemeral = StaticSecret::from(random::<32>());
-        let nonce = random::<24>();
+        let nonce = random::<12>();
         let expires = match &payload.group_event {
             Some(GroupEvent::Join { invite }) => now
                 .saturating_add(self.settings.message_ttl_secs)
@@ -249,7 +256,7 @@ impl Engine {
             _ => now.saturating_add(self.settings.message_ttl_secs),
         };
         let mut e = Envelope {
-            version: 1,
+            version: 2,
             id: format!("{}:{}", self.identity.id(), hex::encode(random::<16>())),
             sender: self.identity.clone(),
             recipient: to.id(),
@@ -261,13 +268,13 @@ impl Engine {
             ciphertext: String::new(),
             signature: String::new(),
         };
-        let cipher = XChaCha20Poly1305::new(
+        let cipher = aes_gcm::Aes256Gcm::new(
             (&key(&ephemeral, &PublicKey::from(bytes32(&to.exchange)?))?).into(),
         );
         e.ciphertext = hex::encode(
             cipher
                 .encrypt(
-                    XNonce::from_slice(&nonce),
+                    aes_gcm::Nonce::from_slice(&nonce),
                     chacha20poly1305::aead::Payload {
                         msg: &serde_json::to_vec(payload).map_err(err)?,
                         aad: &aad(&e),
@@ -340,7 +347,7 @@ impl Engine {
         self.prune(now);
         let e = &f.envelope;
         if serde_json::to_vec(&f).map_err(err)?.len() > MAX_FRAME
-            || e.version != 1
+            || ![1, 2].contains(&e.version)
             || e.hop_limit == 0
             || e.hop_limit > 8
             || f.hops >= e.hop_limit
@@ -372,27 +379,28 @@ impl Engine {
         }
         if e.recipient == self.identity.id() {
             let nonce = hex::decode(&e.nonce).map_err(err)?;
-            if nonce.len() != 24 {
-                return Err("bad nonce".into());
-            }
-            let cipher = XChaCha20Poly1305::new(
-                (&key(
-                    &StaticSecret::from(bytes32(&self.exchange)?),
-                    &PublicKey::from(bytes32(&e.ephemeral)?),
-                )?)
-                    .into(),
-            );
-            let plain = cipher
-                .decrypt(
-                    XNonce::from_slice(&nonce),
-                    chacha20poly1305::aead::Payload {
-                        msg: &hex::decode(&e.ciphertext).map_err(err)?,
-                        aad: &aad(e),
-                    },
-                )
-                .map_err(err)?;
+            let secret = key(
+                &StaticSecret::from(bytes32(&self.exchange)?),
+                &PublicKey::from(bytes32(&e.ephemeral)?),
+            )?;
+            let ciphertext = hex::decode(&e.ciphertext).map_err(err)?;
+            let associated = aad(e);
+            let payload = chacha20poly1305::aead::Payload {
+                msg: &ciphertext,
+                aad: &associated,
+            };
+            let plain = match (e.version, nonce.len()) {
+                (1, 24) => XChaCha20Poly1305::new((&secret).into())
+                    .decrypt(XNonce::from_slice(&nonce), payload)
+                    .map_err(err)?,
+                (2, 12) => aes_gcm::Aes256Gcm::new((&secret).into())
+                    .decrypt(aes_gcm::Nonce::from_slice(&nonce), payload)
+                    .map_err(err)?,
+                _ => return Err("bad nonce".into()),
+            };
             let p: Payload = serde_json::from_slice(&plain).map_err(err)?;
             if usize::from(p.ack.is_some())
+                + usize::from(p.read.is_some())
                 + usize::from(p.text.is_some())
                 + usize::from(p.group_event.is_some())
                 != 1
@@ -403,7 +411,12 @@ impl Engine {
             {
                 return Err("invalid payload kind".into());
             }
-            if let Some(ack) = p.ack.as_deref() {
+            if let Some(read) = p.read.as_deref() {
+                if !self.known_sender(&e.sender) {
+                    return Err("untrusted read receipt".into());
+                }
+                self.accept_read(&e.sender, read);
+            } else if let Some(ack) = p.ack.as_deref() {
                 if !self.known_sender(&e.sender) {
                     return Err("untrusted receipt sender".into());
                 }
@@ -592,5 +605,65 @@ impl Engine {
                 .map_err(err)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod crypto_compatibility_tests {
+    use super::*;
+    #[test]
+    fn legacy_ciphertext_still_decrypts_and_read_spoof_is_ignored() {
+        let mut a = Engine::new("alice");
+        let mut b = Engine::new("bob");
+        let c = Engine::new("mallory");
+        a.add_contact(b.identity.clone()).unwrap();
+        b.add_contact(a.identity.clone()).unwrap();
+        a.add_contact(c.identity.clone()).unwrap();
+        let id = a
+            .send(&b.identity.id(), "legacy secret", None, 100)
+            .unwrap();
+        let mut f = a.outgoing(100).remove(0);
+        let ephemeral = StaticSecret::from(random::<32>());
+        let nonce = random::<24>();
+        f.envelope.version = 1;
+        f.envelope.ephemeral = hex::encode(PublicKey::from(&ephemeral).as_bytes());
+        f.envelope.nonce = hex::encode(nonce);
+        f.envelope.ciphertext = hex::encode(
+            XChaCha20Poly1305::new(
+                (&key(
+                    &ephemeral,
+                    &PublicKey::from(bytes32(&b.identity.exchange).unwrap()),
+                )
+                .unwrap())
+                    .into(),
+            )
+            .encrypt(
+                XNonce::from_slice(&nonce),
+                chacha20poly1305::aead::Payload {
+                    msg: br#"{"text":"legacy secret","ack":null,"group":null}"#,
+                    aad: &aad(&f.envelope),
+                },
+            )
+            .unwrap(),
+        );
+        f.envelope.signature = hex::encode(
+            SigningKey::from_bytes(&bytes32(&a.signing).unwrap())
+                .sign(&canonical(&f.envelope).unwrap())
+                .to_bytes(),
+        );
+        b.receive(f, 101).unwrap();
+        assert_eq!(b.history[0].text, "legacy secret");
+        let forged = c
+            .seal(
+                &a.identity,
+                &Payload {
+                    read: Some(id),
+                    ..Payload::default()
+                },
+                102,
+            )
+            .unwrap();
+        a.receive(forged, 102).unwrap();
+        assert_eq!(a.history[0].status, "queued");
     }
 }

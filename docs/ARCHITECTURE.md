@@ -1,4 +1,4 @@
-# 架构与协议 v1
+# 架构与协议
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ TCP：监听 IPv4，默认端口 37078。客户端发送已见 ID 清单、读�
 
 UDP：Android/CLI 可在 37077 端口每约 5 秒广播 `CM1 <fingerprint> <TCP port>`，从数据包源 IP 得到地址。广播不建立信任，不用于自动添加好友；发现项 60 秒过期，手动邻居持久化并持续重连。最多 300 邻居。同步一轮耗时会延长实际广播周期。当前没有 IPv6 / Bonjour；iOS 默认不启用 UDP 广播，避免依赖 Apple multicast 特殊 entitlement。
 
-BLE：相同 service UUID `b8554a10-6a9a-4c18-ae32-32a3bc1d0010`，DATA UUID 的第一段改为 `b8554a11`。DATA 支持有响应写入及 notify。中心订阅 CCC 后双向发送：中心 write→外设，外设 notify→中心。流格式为 4 字节大端长度 + UTF-8 Frame JSON，兼容最低 ATT MTU 的 20 字节分块，每连接独立收发缓冲。超出 65536 字节拒收，接收停顿 30 秒清理缓冲。GATT 写入成功不等于端到端交付。最多四条中心连接及四个订阅者；双角色可能产生重复链路，核心负责去重。
+BLE：相同 service UUID `b8554a10-6a9a-4c18-ae32-32a3bc1d0020`，DATA UUID 的第一段改为 `b8554a11`。DATA 支持有响应写入及 notify。中心订阅 CCC 后双向发送：中心 write→外设，外设 notify→中心。流格式为 4 字节大端长度 + CM2 标记与 zlib 压缩的加密 Frame JSON；分块使用协商后的可用 MTU，上限 244 字节，回退至 20 字节，每连接独立收发缓冲。超出 65536 字节拒收，接收停顿 30 秒清理缓冲。GATT 写入成功不等于端到端交付。最多四条中心连接及四个订阅者；双角色可能产生重复链路，核心负责去重。
 
 BLE 每 5 秒在空闲链路发送一个待传封装，以循环游标避免永久只发缓存前部。核心返回一个共享轮转批次给所有活跃 BLE 链路。BLE 暂未做 inventory 优化、MTU 提速、RSSI 路由或可靠拥塞控制。待传多时延迟较高。TCP 与 BLE 可并行发送同一消息，由签名 ID 去重；当前使用并行机会式传输，而非质量评分选路。
 
@@ -40,7 +40,7 @@ ID 为发送者公钥 SHA-256 指纹 + `:` + 128 位随机值，防止其他身�
 
 ## 密钥与认证
 
-Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长期收件密钥；每个封装生成新的发送方临时密钥。双方共享值经 HKDF-SHA256 派生密钥，用 XChaCha20-Poly1305 加密文本/群标识或 ACK，随机 192 位 nonce。依赖 RustCrypto、dalek、操作系统 CSPRNG，拒绝无贡献 X25519 共享值。
+Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长期收件密钥；每个封装生成新的发送方临时密钥。双方共享值经 HKDF-SHA256 派生密钥，新消息用 AES-256-GCM 加密文本、群控制和回执，随机 96 位 nonce；旧 v1 消息保留 XChaCha20-Poly1305 与 192 位 nonce 的解密支持。依赖 RustCrypto、dalek、操作系统 CSPRNG，拒绝无贡献 X25519 共享值。
 
 所有封装字段（除可变的实际跳数）参与 Ed25519 严格验签；AEAD 附加数据绑定协议、消息 ID、发送者与收件人。好友二维码提供签名/收件公钥及昵称，要求当面核对；后续同一签名公钥但不同收件密钥的封装被拒绝。中继只掌握密文，无收件私钥。传输不额外使用 TLS；不隐藏通信元数据。
 
@@ -53,7 +53,7 @@ Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长�
 - `cm_close(handle)`：停止工作线程、释放 runtime，只调用一次。
 - 同一 handle 的调用与关闭必须串行。Kotlin 使用同步入口；Swift 在主执行器调用，Rust 网络线程只在操作 Engine 时持锁，网络 I/O 不持锁。
 
-命令：`state`、`profile`（修改昵称）、`contact_card`、`scan`、`friend_remark`、`settings`、`group_create`、`group_edit`、`group_invite`、`group_sync`、`group_leave`、`group_send`、`group_migrate`，以及兼容导入的 `contact`、私聊 `send`、`peer`、`relay`、`ingest`、`outgoing`。`send` 不再接受本机群发标签，新界面统一调用 `group_send`。`outgoing` 是循环分页，默认最多 24，BLE 指定 `limit:1`。`state` 不返回私钥，也不反复写磁盘。`send`/`contact`/`peer`/`relay` 等修改在返回成功前保存；网络接收同样在同步完成前保存。手动 peer 用 IP:port 字符串，暂不支持主机名、删除 UI 或网络变更后的 IP 自动纠正。
+命令：`state`、`profile`（修改昵称）、`contact_card`、`scan`、`friend_remark`、`settings`、`group_create`、`group_edit`、`group_invite`、`group_sync`、`group_leave`、`group_send`、`group_migrate`，以及兼容导入的 `contact`、私聊 `send`、`peer`、`relay`、`ingest`、`outgoing`。`send` 不再接受本机群发标签，新界面统一调用 `group_send`。`outgoing` 是循环分页，默认最多 24，旧调用指定 `limit:1`；新 BLE 使用 `outgoing_ble`、`ingest_ble`、`link_down`，详见[路由与可靠性说明](MESH-RELIABILITY.md)。`state` 不返回私钥，也不反复写磁盘。`send`/`contact`/`peer`/`relay` 等修改在返回成功前保存；网络接收同样在同步完成前保存。手动 peer 用 IP:port 字符串，暂不支持主机名、删除 UI 或网络变更后的 IP 自动纠正。
 
 
 ## alpha-0.5.0 好友与群协议
@@ -74,3 +74,7 @@ Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长�
 
 
 为处理 Mesh 中的乱序，群主在本机记录当前各成员最近一次加入时的群版本。退群请求携带发送时看到的版本；早于最近入群版本的旧请求只确认收到，不会撤销后来的重新加入。收到旧的移除快照时，也不会清掉较新的待处理入群申请；新确认快照仍可完成加入。待确认的重新入群不允许同时退群，以免在尚未得知最新群版本时生成冲突请求。
+
+## alpha-0.6.0
+
+新消息封装使用 version 2 与 AES-256-GCM，version 1 的 XChaCha20-Poly1305 封装仍可读取。`read` 命令只针对已收到的消息产生端到端加密已读回执；群回执按逻辑消息 ID 和原始目标成员绑定。BLE 改用 CM2 压缩、独立服务 UUID、协商 MTU 和每链路退避；[详细协议与限制](MESH-RELIABILITY.md)。上文关于 v1 的字段描述适用于旧缓存。

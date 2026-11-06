@@ -70,6 +70,9 @@ import UserNotifications
             defer { cm_free(output) }
             let response = try JSONSerialization.jsonObject(with:Data(String(cString:output).utf8)) as? [String:Any] ?? [:]
             guard response["ok"] as? Bool == true else { error = response["error"] as? String ?? "请求失败"; return nil }
+            let op=command["op"] as? String ?? ""
+            if ["send","group_send","group_create","group_edit","group_sync","group_leave","read"].contains(op) ||
+                (["ingest","ingest_ble"].contains(op) && (response["data"] as? [String:Any])?["accepted"] as? Bool == true) {ble?.wake()}
             return response["data"]
         } catch { self.error = error.localizedDescription; return nil }
     }

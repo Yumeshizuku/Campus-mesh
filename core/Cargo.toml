@@ -16,3 +16,6 @@ sha2 = "0.10"
 rand = "0.8"
 hex = "0.4"
 fs2 = "0.4"
+aes-gcm = "0.10"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+base64 = "0.22"
