@@ -15,9 +15,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Foreground BLE GATT transport. Both roles use length-prefixed CM2 compressed encrypted envelopes. No plaintext
- * crosses GATT. Chunks use the negotiated ATT MTU, with a 20-byte fallback. The encrypted mesh ACK, not a
- * successful GATT write, confirms delivery.
+ * Foreground BLE GATT transport. Both roles use length-prefixed CM2 compressed encrypted envelopes.
+ * No plaintext crosses GATT. Chunks use the negotiated ATT MTU, with a 20-byte fallback. The
+ * encrypted mesh ACK, not a successful GATT write, confirms delivery.
  */
 @SuppressLint("MissingPermission")
 class BleMesh(private val context: Context) {
@@ -102,6 +102,7 @@ class BleMesh(private val context: Context) {
     private var scanSince = 0L
     private var nextSync = 0L
     private var idleRounds = 0
+    private var workRevision = -1L
     private var advertisingMode = AdvertiseSettings.ADVERTISE_MODE_LOW_POWER
     private val mtus = mutableMapOf<String, Int>()
     private val advertiseCallback =
@@ -360,13 +361,20 @@ class BleMesh(private val context: Context) {
             override fun run() {
                 if (!running) return
                 updateScanWindow()
+                if (workRevision != Native.workRevision) {
+                    workRevision = Native.workRevision
+                    nextSync = 0L
+                    idleRounds = 0
+                }
                 if (System.currentTimeMillis() < nextSync) {
                     handler.postDelayed(this, 1000)
                     return
                 }
                 var offered = 0
                 runCatching {
-                        for ((address, c) in channels.toMap()) if (c.offset >= c.tx.size) {
+                        for ((address, c) in channels.toMap()) if (
+                            characteristics.containsKey(address) && c.offset >= c.tx.size
+                        ) {
                             val frames =
                                 Native.request(
                                         JSONObject()

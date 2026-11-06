@@ -64,6 +64,7 @@ final class BLEMesh: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, C
         }
         onStatus?("BLE 正在启动")
     }
+    func wake(){idleRounds=0;lastSync=Date.distantPast}
     func stop(){running=false;timer?.invalidate();timer=nil;central?.stopScan();peripheral?.stopAdvertising();peripheral?.removeAllServices();for p in devices.values{central.cancelPeripheralConnection(p)};devices.removeAll();remoteCharacteristics.removeAll();ready.removeAll();for c in clientChannels.values{dropLink(c.link)};for c in serverChannels.values{dropLink(c.link)};clientChannels.removeAll();subscribers.removeAll();serverChannels.removeAll();scanning=false;onStatus?("BLE 已停止")}
     private func status(){onStatus?("BLE · \(ready.count+subscribers.count) 条 GATT 链路")}
     func centralManagerDidUpdateState(_ manager:CBCentralManager){if running && manager.state == .poweredOn{setScanning(true)}else{onStatus?("BLE 不可用：检查蓝牙与权限")}}

@@ -14,6 +14,9 @@ object Native {
     external fun close(handle: Long)
 
     private var handle = 0L
+    @Volatile
+    var workRevision = 0L
+        private set
 
     @Synchronized
     fun start(path: String, name: String) {
@@ -31,6 +34,22 @@ object Native {
                 String(call(handle, input.toString().toByteArray(Charsets.UTF_8)), Charsets.UTF_8)
             )
         check(response.getBoolean("ok")) { response.optString("error") }
+        val op = input.optString("op")
+        if (
+            op in
+                setOf(
+                    "send",
+                    "group_send",
+                    "group_create",
+                    "group_edit",
+                    "group_sync",
+                    "group_leave",
+                    "read",
+                ) ||
+                (op in setOf("ingest", "ingest_ble") &&
+                    response.optJSONObject("data")?.optBoolean("accepted") == true)
+        )
+            workRevision++
         return response
     }
 
