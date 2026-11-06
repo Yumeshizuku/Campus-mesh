@@ -88,6 +88,7 @@ struct ChatRoom: View {
     let thread:String
     @EnvironmentObject private var mesh:MeshStore
     @EnvironmentObject private var appearance:AppearanceSettings
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text=""
     @State private var query=""
@@ -98,6 +99,13 @@ struct ChatRoom: View {
     private var title:String {isGroup ? mesh.groupName(target) : mesh.displayName(target)}
     private var preset:MeshGroup? {mesh.groups.first(where:{$0.id==target})}
     @State private var showDetails=false
+    private func markRead(){
+        guard scenePhase == .active else{return}
+        appearance.markRead(thread,messages:mesh.history.map(DisplayMessage.init))
+        for m in mesh.history.map(DisplayMessage.init).filter({$0.thread==thread && $0.incoming && $0.status != "read"}) {
+            _ = mesh.call(["op":"read","id":m.id])
+        }
+    }
     private var messages:[DisplayMessage] {Array(mesh.history.map(DisplayMessage.init).filter{$0.thread==thread && (query.isEmpty || $0.text.localizedCaseInsensitiveContains(query))}.suffix(200))}
     var body: some View {
         let visible=messages
@@ -125,8 +133,8 @@ struct ChatRoom: View {
                     }.buttonStyle(.plain).padding()
                 }
             }
-            .onAppear {text=appearance.draft(thread);appearance.markRead(thread,messages:mesh.history.map(DisplayMessage.init));proxy.scrollTo("latest",anchor:.bottom)}
-            .onChange(of:messages.last?.id) {_ in showLatest=true;appearance.markRead(thread,messages:mesh.history.map(DisplayMessage.init))}
+            .onAppear {text=appearance.draft(thread);markRead();proxy.scrollTo("latest",anchor:.bottom)}
+            .onChange(of:messages.last?.id) {_ in showLatest=true;markRead()}
             .safeAreaInset(edge:.bottom,spacing:0) {composer {send();scrollToLatest(proxy);showLatest=false}}
         }
         .navigationTitle("").navigationBarTitleDisplayMode(.inline)
@@ -202,7 +210,7 @@ struct MessageBubble: View {
                 Text(message.text).font(.system(size:baseSize * appearance.fontSize / 16)).textSelection(.enabled)
                 HStack(spacing:5) {
                     if appearance.timestamps {Text(message.time,style:.time)}
-                    if !message.incoming {Image(systemName:message.status=="delivered" ? "checkmark" : message.status=="expired" ? "exclamationmark.circle" : "clock")}
+                    if !message.incoming {Image(systemName:message.status=="read" ? "checkmark.circle.fill" : message.status=="delivered" ? "checkmark" : message.status=="expired" ? "exclamationmark.circle" : "clock")}
                     Text(message.statusLabel)
                 }.font(.caption2).foregroundStyle(.secondary)
             }

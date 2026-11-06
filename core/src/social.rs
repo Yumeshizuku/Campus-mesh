@@ -799,8 +799,20 @@ impl Engine {
                 if !message.delivery.contains_key(&sender.id()) {
                     return;
                 }
-                message.delivery.insert(sender.id(), "delivered".into());
-                message.status = if message.delivery.values().all(|s| s == "delivered") {
+                if message
+                    .delivery
+                    .get(&sender.id())
+                    .is_some_and(|s| s != "read")
+                {
+                    message.delivery.insert(sender.id(), "delivered".into());
+                }
+                message.status = if message.delivery.values().all(|s| s == "read") {
+                    "read"
+                } else if message
+                    .delivery
+                    .values()
+                    .all(|s| s == "delivered" || s == "read")
+                {
                     "delivered"
                 } else {
                     "partially_delivered"
@@ -813,7 +825,9 @@ impl Engine {
             .iter_mut()
             .find(|m| m.id == ack && !m.incoming && m.peer == sender.id())
         {
-            message.status = "delivered".into();
+            if message.status != "read" {
+                message.status = "delivered".into();
+            }
         } else if !self.cache.get(ack).is_some_and(|f| {
             f.envelope.sender.id() == self.identity.id() && f.envelope.recipient == sender.id()
         }) {

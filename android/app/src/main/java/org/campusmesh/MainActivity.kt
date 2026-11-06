@@ -905,7 +905,13 @@ class MainActivity : AppCompatActivity() {
         (0 until history.length())
             .map { history.getJSONObject(it) }
             .filter { it.optBoolean("incoming") && threadKey(it) == conversation }
-            .forEach { readIds.add(it.optString("id")) }
+            .forEach {
+                readIds.add(it.optString("id"))
+                if (it.optString("status") != "read")
+                    runCatching {
+                        Native.request(JSONObject().put("op", "read").put("id", it.optString("id")))
+                    }
+            }
         if (before != readIds) ui.edit().putStringSet("readIds", readIds.toSet()).apply()
         val stamp = matching.joinToString { it.toString() } + conversation + search
         if (!force && stamp == lastRender) return
@@ -998,13 +1004,15 @@ class MainActivity : AppCompatActivity() {
             )
             val state =
                 when (message.optString("status")) {
-                    "queued" -> "等待送达"
+                    "queued" -> "发送中"
+                    "read" -> "已读"
                     "delivered" -> "已送达"
                     "partially_delivered" -> {
                         val delivery = message.optJSONObject("delivery") ?: JSONObject()
                         val delivered =
                             delivery.keys().asSequence().count {
-                                delivery.optString(it) == "delivered"
+                                delivery.optString(it) == "delivered" ||
+                                    delivery.optString(it) == "read"
                             }
                         "已送达 $delivered/${delivery.length()}"
                     }
@@ -1021,6 +1029,7 @@ class MainActivity : AppCompatActivity() {
                 label(
                         time +
                             when (message.optString("status")) {
+                                "read" -> "✓✓ 已读"
                                 "delivered" -> "✓ 已送达"
                                 "queued" -> "◷ 等待送达"
                                 else -> state

@@ -29,7 +29,14 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
     }
     let mut e = h.runtime.engine.lock().map_err(err)?;
     e.prune(network::now());
-    let read_only = ["state", "outgoing", "contact_card"].contains(&op);
+    let read_only = [
+        "state",
+        "outgoing",
+        "outgoing_ble",
+        "link_down",
+        "contact_card",
+    ]
+    .contains(&op);
     let previous = if read_only { None } else { Some(e.clone()) };
     let result = (|| -> Result<serde_json::Value> {
         let result = match op {
@@ -131,8 +138,44 @@ fn command(h: &mut Handle, v: serde_json::Value) -> Result<serde_json::Value> {
                 e.relay = v["enabled"].as_bool().ok_or("missing enabled")?;
                 serde_json::json!({"ok":true})
             }
-            "ingest" => {
-                serde_json::json!({"accepted":e.receive(serde_json::from_value(v["frame"].clone()).map_err(err)?,network::now())?})
+            "read" => {
+                e.mark_read(v["id"].as_str().ok_or("missing id")?, network::now())?;
+                serde_json::json!({"ok":true})
+            }
+            "link_down" => {
+                e.routing
+                    .disconnect(v["link"].as_str().ok_or("missing link")?);
+                serde_json::json!({"ok":true})
+            }
+            "ingest" | "ingest_ble" => {
+                let frame = if op == "ingest_ble" {
+                    wire::decode(v["wire"].as_str().ok_or("missing wire")?)?
+                } else {
+                    serde_json::from_value(v["frame"].clone()).map_err(err)?
+                };
+                let accepted = if let Some(link) = v["link"].as_str() {
+                    e.receive_on_link(
+                        link,
+                        v["rssi"].as_i64().unwrap_or(-80).clamp(-127, -1) as i16,
+                        frame,
+                        network::now(),
+                    )?
+                } else {
+                    e.receive(frame, network::now())?
+                };
+                serde_json::json!({"accepted":accepted})
+            }
+            "outgoing_ble" => {
+                let frames = e.outgoing_on_link(
+                    v["link"].as_str().ok_or("missing link")?,
+                    v["rssi"].as_i64().unwrap_or(-80).clamp(-127, -1) as i16,
+                    network::now(),
+                    v["limit"].as_u64().unwrap_or(1).clamp(1, 24) as usize,
+                )?;
+                serde_json::json!(frames
+                    .iter()
+                    .map(wire::encode)
+                    .collect::<Result<Vec<_>>>()?)
             }
             "outgoing" => {
                 let limit = (v["limit"].as_u64().unwrap_or(24).clamp(1, 24) as usize)

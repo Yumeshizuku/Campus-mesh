@@ -82,7 +82,7 @@ struct DisplayMessage: Identifiable {
         time=Date(timeIntervalSince1970:(raw["time"] as? NSNumber)?.doubleValue ?? 0)
     }
     var statusLabel:String {
-        switch status {case "delivered":return "已送达";case "partially_delivered":return "已送达 \(delivery.values.filter{$0=="delivered"}.count)/\(delivery.count)";case "received":return "已收到";case "expired":return "已过期";default:return "等待送达"}
+        switch status {case "read":return "已读";case "delivered":return "已送达";case "partially_delivered":return "已送达 \(delivery.values.filter{$0=="delivered" || $0=="read"}.count)/\(delivery.count)";case "received":return "已收到";case "expired":return "已过期";default:return "发送中"}
     }
     var thread:String { if let group=group {return "g:\(group)"};return "p:\(peer)" }
 }

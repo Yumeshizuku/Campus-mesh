@@ -1,4 +1,4 @@
-# 架构与协议 v1
+# 架构与协议
 
 ```mermaid
 flowchart LR
@@ -53,7 +53,7 @@ Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长�
 - `cm_close(handle)`：停止工作线程、释放 runtime，只调用一次。
 - 同一 handle 的调用与关闭必须串行。Kotlin 使用同步入口；Swift 在主执行器调用，Rust 网络线程只在操作 Engine 时持锁，网络 I/O 不持锁。
 
-命令：`state`、`profile`（修改昵称）、`contact_card`、`scan`、`friend_remark`、`settings`、`group_create`、`group_edit`、`group_invite`、`group_sync`、`group_leave`、`group_send`、`group_migrate`，以及兼容导入的 `contact`、私聊 `send`、`peer`、`relay`、`ingest`、`outgoing`。`send` 不再接受本机群发标签，新界面统一调用 `group_send`。`outgoing` 是循环分页，默认最多 24，BLE 指定 `limit:1`。`state` 不返回私钥，也不反复写磁盘。`send`/`contact`/`peer`/`relay` 等修改在返回成功前保存；网络接收同样在同步完成前保存。手动 peer 用 IP:port 字符串，暂不支持主机名、删除 UI 或网络变更后的 IP 自动纠正。
+命令：`state`、`profile`（修改昵称）、`contact_card`、`scan`、`friend_remark`、`settings`、`group_create`、`group_edit`、`group_invite`、`group_sync`、`group_leave`、`group_send`、`group_migrate`，以及兼容导入的 `contact`、私聊 `send`、`peer`、`relay`、`ingest`、`outgoing`。`send` 不再接受本机群发标签，新界面统一调用 `group_send`。`outgoing` 是循环分页，默认最多 24，旧调用指定 `limit:1`；新 BLE 使用 `outgoing_ble`、`ingest_ble`、`link_down`，详见[路由与可靠性说明](MESH-RELIABILITY.md)。`state` 不返回私钥，也不反复写磁盘。`send`/`contact`/`peer`/`relay` 等修改在返回成功前保存；网络接收同样在同步完成前保存。手动 peer 用 IP:port 字符串，暂不支持主机名、删除 UI 或网络变更后的 IP 自动纠正。
 
 
 ## alpha-0.5.0 好友与群协议
@@ -74,3 +74,7 @@ Ed25519：长期签名身份；指纹为签名公钥的 SHA-256。X25519：长�
 
 
 为处理 Mesh 中的乱序，群主在本机记录当前各成员最近一次加入时的群版本。退群请求携带发送时看到的版本；早于最近入群版本的旧请求只确认收到，不会撤销后来的重新加入。收到旧的移除快照时，也不会清掉较新的待处理入群申请；新确认快照仍可完成加入。待确认的重新入群不允许同时退群，以免在尚未得知最新群版本时生成冲突请求。
+
+## alpha-0.6.0
+
+新消息封装使用 version 2 与 AES-256-GCM，version 1 的 XChaCha20-Poly1305 封装仍可读取。`read` 命令只针对已收到的消息产生端到端加密已读回执；群回执按逻辑消息 ID 和原始目标成员绑定。BLE 改用 CM2 压缩、独立服务 UUID、协商 MTU 和每链路退避；[详细协议与限制](MESH-RELIABILITY.md)。上文关于 v1 的字段描述适用于旧缓存。
